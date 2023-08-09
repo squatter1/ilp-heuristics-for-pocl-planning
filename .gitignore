@@ -1,0 +1,51 @@
+# Root project
+.vscode/
+build/
+
+# VHPOP
+vhpop/.libs/
+vhpop/config.h
+vhpop/libtool
+vhpop/vhpop
+vhpop/vhpop-*.*.tar.gz
+vhpop/vhpop-*.*/
+vhpop/*.log
+vhpop/*.trs
+vhpop/src/*_test
+
+# Automake files.
+vhpop/Makefile.in
+vhpop/.deps/
+vhpop/.dirstamp
+
+# Autoconf files.
+vhpop/autom4te.cache/
+vhpop/aclocal.m4
+vhpop/config.h.in
+vhpop/config.log
+vhpop/config.status
+vhpop/configure
+vhpop/stamp-h1
+
+# Libtool files.
+vhpop/ltmain.sh
+
+# M4 files.
+vhpop/libtool.m4
+vhpop/ltoptions.m4
+vhpop/ltversion.m4
+
+# Generated Makefile.
+vhpop/Makefile
+vhpop/!gtest/make/Makefile
+vhpop/!gtest/scripts/test/Makefile
+
+# Compiled object files.
+vhpop/*.lo
+vhpop/*.o
+
+# Compiled static libraries.
+vhpop/*.la
+
+# Backup files.
+vhpop/*~
