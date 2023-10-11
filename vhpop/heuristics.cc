@@ -949,7 +949,9 @@ Heuristic& Heuristic::operator=(const std::string& name) {
     size_t next_pos = name.find('/', pos);
     std::string key = name.substr(pos, next_pos - pos);
     const char* n = key.c_str();
-    if (strcasecmp(n, "LIFO") == 0) {
+    if (strcasecmp(n, "HEUR_3770") == 0) {
+      h_.push_back(HEUR_3770);
+    } else if (strcasecmp(n, "LIFO") == 0) {
       h_.push_back(LIFO);
     } else if (strcasecmp(n, "FIFO") == 0) {
       h_.push_back(FIFO);
@@ -1019,6 +1021,12 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
        hi != h_.end(); hi++) {
     HVal h = *hi;
     switch (h) {
+    case HEUR_3770: /* SCOTT HOWSAM */
+      // We start with an empty rank vector, we need to use rank.push_back to give a rank to this specific plan
+      // Plan struct defined at plans.h line 128
+      // Temp heuristic of open conditions
+      rank.push_back(plan.num_open_conds());
+      break;
     case LIFO:
       rank.push_back(-1.0*plan.serial_no());
       break;

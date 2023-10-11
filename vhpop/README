@@ -63,6 +63,7 @@ plan ranking functions use a weight, which can be specified with the
 -w flag.  VHPOP implements the following simple plan ranking
 functions:
 
+  HEUR_3770 TODO
   LIFO gives priority to plans created later.
   FIFO gives priority to plans created earlier.
   OC gives priority to plans with few open conditions.

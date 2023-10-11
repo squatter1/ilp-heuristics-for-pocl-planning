@@ -221,6 +221,7 @@ struct InvalidHeuristic : public std::runtime_error {
 /*
  * Heuristic for ranking plans.
  *
+ * HEUR_3770 is SCOTT HOWSAM heuristic for COMP3770 todo
  * LIFO gives priority to plans created later.
  * FIFO gives priority to plans created earlier.
  * OC gives priority to plans with few open conditions.
@@ -251,7 +252,7 @@ struct Heuristic {
 
 private:
   /* Heuristics. */
-  typedef enum { LIFO, FIFO, OC, UC, BUC, S_PLUS_OC, UCPOP,
+  typedef enum { HEUR_3770, LIFO, FIFO, OC, UC, BUC, S_PLUS_OC, UCPOP,
                  ADD, ADD_COST, ADD_WORK, ADDR, ADDR_COST, ADDR_WORK,
                  MAKESPAN } HVal;
 
