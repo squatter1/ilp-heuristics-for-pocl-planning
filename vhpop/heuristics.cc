@@ -37,6 +37,7 @@
 #include "problems.h"
 #include "terms.h"
 
+
 /* Generates a random number in the interval [0,1). */
 static double rand01ex() {
   return rand()/(RAND_MAX + 1.0);
@@ -1009,7 +1010,7 @@ bool Heuristic::needs_planning_graph() const {
 
 /* Fills the provided vector with the ranks for the given plan. */
 void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
-                          float weight, const Domain& domain,
+                          float weight, const Domain& domain, const Problem& problem,
                           const PlanningGraph* planning_graph) const {
   bool add_done = false;
   float add_cost = 0.0f;
@@ -1020,6 +1021,76 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
   for (std::vector<HVal>::const_iterator hi = h_.begin();
        hi != h_.end(); hi++) {
     HVal h = *hi;
+    // Debugging code TODO remove
+    // Define the osstream
+    std::ostream& os = std::cout;
+    // Use plan output operator std::ostream& operator<<(std::ostream& os, const Plan& p) {
+    // to print the plan to the output stream
+    os << plan << std::endl;
+    os << "+++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+    // Print the initial atoms
+    os << "Init: ";
+    AtomSet init = problem.init_atoms();
+    for (AtomSet::const_iterator ai = init.begin();
+         ai != init.end(); ai++) {
+      os << ' ';
+      (*ai)->print(os, 0, Bindings::EMPTY);
+    }
+    os << std::endl;
+    os << "----------------------------------------" << std::endl;
+    // Initialise empty goal AtomSet
+    AtomSet goal = AtomSet();
+    // Iterate through the conjuncts in this goal
+    const Formula& goal_formula = problem.goal();
+    const Conjunction* goal_conjunctions = dynamic_cast<const Conjunction*>(&goal_formula);
+    if (goal_conjunctions) {
+      // Access conjuncts_ directly as member variable
+      for (FormulaList::const_iterator it = goal_conjunctions->conjuncts().begin();
+           it != goal_conjunctions->conjuncts().end(); ++it) {
+        const Formula* conjunct = *it;
+        // Get the atom
+        const Atom* atom = dynamic_cast<const Atom*>(conjunct);
+        if (atom) {
+          // Add to goal AtomSet
+          goal.insert(atom);
+        } else {
+          os << "Not an atom" << std::endl;
+        }
+      }
+    } else {
+      os << "Not a conjunction" << std::endl;
+    }
+    // Print the goal atoms
+    os << "Goal: ";
+    for (AtomSet::const_iterator ai = goal.begin();
+         ai != goal.end(); ai++) {
+      os << ' ';
+      (*ai)->print(os, 0, Bindings::EMPTY);
+    }
+    os << std::endl;
+    os << "----------------------------------------" << std::endl;
+    os << "Problem:" << std::endl;
+    os << problem << std::endl;
+    os << "----------------------------------------" << std::endl;
+    // Get all predicates from the domain
+    PredicateTable predicates = domain.predicates();
+    // Print the predicates
+    os << "Predicates: " << std::endl;
+    os << predicates << std::endl;
+    os << "****************************************" << std::endl;
+    // Get all actions from the domain
+    os << "Actions: " << std::endl;
+    for (std::map<std::string, const ActionSchema*>::const_iterator ai =
+             domain.actions().begin();
+         ai != domain.actions().end(); ai++) {
+      os << std::endl;
+      (*ai).second->print(os);
+    }
+    os << "****************************************" << std::endl;
+    // Get the domain
+    os << "Domain: " << std::endl;
+    os << domain << std::endl;
+    os << "****************************************" << std::endl;
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
       // We start with an empty rank vector, we need to use rank.push_back to give a rank to this specific plan

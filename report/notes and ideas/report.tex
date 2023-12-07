@@ -1,0 +1,112 @@
+\documentclass[runningheads]{llncs}
+
+\usepackage{graphicx, wrapfig, lipsum}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage[colorlinks = true,
+            linkcolor = blue,
+            urlcolor  = blue,
+            citecolor = blue,
+            anchorcolor = blue]{hyperref}
+
+\renewcommand \UrlFont{\color{blue}\rmfamily}
+\renewcommand{\arraystretch}{1.2}
+\newcommand{\ra}[1]{\renewcommand{\arraystretch}{#1}}
+
+\begin{document}
+
+\title{ILP-based delete relaxation heuristics for Partial Order Causal Link (POCL) Planning}
+
+\author{Scott Howsam \and Pascal Bercher}
+
+\institute{The Australian National University, Canberra ACT 2601, Australia}
+
+\maketitle 
+
+\begin{abstract}
+TODO  
+\end{abstract}
+
+\section{Current plan for completing the project}
+\begin{enumerate}
+    \item Write more fancy ideas into future work to note things that can be done later
+    \item Implement the encoding from this paper \cite{Bercher2013POCLHeuristicsViaEncoding}, (noting that each node is an entire classical plan)
+    \item Implement an ILP for classical planning with my bound given this conversion
+    \item First draft write-up + experiments
+    \item Implement some content from future work (eg Fiser's grounding stuff), then re-do write-up while refining theory, explanations, etc each time
+    \item Repeat previous step until there is no more time
+\end{enumerate}
+
+\section{Introduction/Motivation}
+Current state-of-the-art POCL heuristics use delete relaxation of both the current plan AND the inserted actions (need ref).\\
+This is BAD, removes too much information, and makes all the information already gathered by the partial plan useless (should have ref for this from one of pascal's papers).\\
+The equivalent of delete-relaxation in classical planning for POCL planning is actually to maintain the partial plan (orderings, causal links, delete effects) and only remove delete effects from inserted actions (but still respect causal links for inserted actions)\\
+This is still a major relaxation over the planning problem as a whole, as solving this relaxation is an NP-complete problem (compared to PSPACE-complete without the relaxation), since it is now an NPC problem, it can be formalised and solved as an ILP. 
+\\\\
+Note how solving a classical plan with a solver is PSPACE-complete ~\cite{Bercher2021POCLComplexities}. BUT, we know that our partial delete relaxation makes it NP-complete~\cite{Bercher2021POCLComplexities}, since any problem in NP can b reduced to an ILP (need ref), we can now solve the problem with an ILP, instead of a planning solver which could possibly never terminate (hence ILP is much better for determining feasibility as it will reject an infeasible problem in finite time), and the planning solver also isn't optimised to work best on problems reduced to NPC and will use more powerful (and not very useful) techniques.
+
+\section{Background}
+\begin{itemize}
+    \item This paper isn't made particularly well, but does have an ILP used as a POP heuristic (the only such one I could find)~\cite{Bylander1997ILP}
+    \item Relevant complexity results, and the Sample-FF heuristic which is also based on POCL with delete relaxed domain but not a delete relaxed plan.~\cite{Bercher2013POCL-DeleteRelaxation}
+    \item How to convert partial order planning instances into classical ones in order to use classical planning heuristics. ~\cite{Bercher2013POCLHeuristicsViaEncoding}
+    \item Table of relevant complexity results for different types of relaxations in POCL planning.~\cite{Bercher2021POCLComplexities}
+    \item ILP heuristics, but for HTN planning, contains some added constraints which are not relevant for me, doesn't use state of the art for ILP formulation.~\cite{Hoeller2020ILP}
+    \item This grounder has lots of important info on how to prune actions from both ends of a plan. The fam pruning method in particular could be promising to add to a heuristic to simplify the action possibilities.~\cite{fivser2020lifted}
+    \item This could give more context on the $h^2$ pruning done in the grounding paper (presents it is a more general form)~\cite{haslum2009hm}
+    \item State of the art ILP/LP formulation technique (operator counting) with some heuristics~\cite{pommerening2014lp}. These papers expand on that work and may also be helpful:~\cite{pommerening2015non}~\cite{pommerening2015heuristics}~\cite{roger2015linear}
+    \item Solving planning problems with constraints, need to look into this more, not entirely sure why it's relevant, seems more related to SAT (maybe this is relevant for if we were to switch to a SAT approach?)~\cite{singh2023lifted}
+    \item Relax heuristic for POP ~\cite{nguyen2001reviving}
+    \item VHPOP along with additive heuristic ~\cite{younes2003vhpop}
+    \item Pascal's workshop paper on heuristics with classical conversion, relates to 2013 paper~\cite{Bercher13EncodingPlans}
+    \item Modelling classical planning with ILPs (ILP-PLAN) ~\cite{kautz2000integer}
+    \item An ILP model for delete free classical planning with constraints, superceded by ~\cite{pommerening2014lp} but still a useful paper as it is more directly connected, contains IP model enhancements. Note the terminology, eg. 'first achiever', relevant to some things eg bound proof~\cite{imai2015practical}
+\end{itemize}
+\section{Current Results}
+LOOK INTO: bound of $|G\setminus I|+|del_P|+|P|$
+\subsection{Bound on number of inserted actions}
+Bound for required number of actions to add to complete plan is: \[\min (|A_D|,|F_D|)+ |\text{del}_P|\]
+Proof that $|A_D|+ |\text{del}_P|$ is a bound:\\
+Let $P$ be a partial order plan, and let $\Bar{P}$ be any total order completion of $P$ by adding delete-relaxed actions.\\
+We now take three sets of actions $\Bar{P}_1,\Bar{P}_2,\Bar{P}_3\in\Bar{P}$:\\
+$\Bar{P}_1=a_i\in\Bar{P}\mid \forall a_j\in\Bar{P}: a_j=a_i\implies i\leq j$\\
+$\Bar{P}_2=a_i\in\Bar{P}\mid \exists a_j\in\Bar{P},\exists f\in \text{del}(a_j):i>j \wedge f\in \text{add}(a_i) \wedge i\text{ is minimal}$\\
+$\Bar{P}_3=a\in\Bar{P}\mid a\in P$\\
+Now let $\Bar{P'}\subseteq\Bar{P}$ be another total order plan containing $a\in \Bar{P}\mid a\in\Bar{P}_1\vee a\in\Bar{P}_2\vee a\in\Bar{P}_3$, maintaining ordering.\\
+$|\Bar{P}_1\setminus \Bar{P}_3|$ is at most $|A_D|$, as each action must be from the delete-relaxed action domain (not in $P$), and there are at most one of each unique action included.\\
+$|\Bar{P}_2|$ is at most $|\text{del}_P|$ as all delete effects are in $P$ and for each deleted fact, at most one action is included in $\Bar{P}_2$ (as it only includes the first action to reestablish that fact).\\
+$|\Bar{P}_3|=|P|$.\\
+Hence $|\Bar{P'}|\leq |A_D|+ |\text{del}_P| + |P|$.\\
+Now note that $\forall a_i\in \Bar{P}\setminus\Bar{P'},\forall f\in \text{add}(a_i): f$ is true at step $i-1$. This is because if $a_i$ was the first action to establish the fact $f$ is would be in $\Bar{P}_1$, and if it was the first to reestablish $f$ after a subsequent deletion, it would be in $\Bar{P}_2$. Hence no information is lost by reducing $\Bar{P}$ to $\Bar{P'}$, and so $\Bar{P'}$ is executable, meets all goals, and respects all causal links.\\
+Since the number of added actions needed to create $\Bar{P'}$ from $P$ is at most $|A_D|+ |\text{del}_P|$, this is a bound on the number of delete-relaxed actions required.
+\\\\
+Proof that $|F_D|+ |\text{del}_P|$ is a bound:\\
+Replace $\Bar{P}_1$ of the previous proof with:\\
+$\Bar{P}_1=a_i\in\Bar{P}\mid \exists f: f\in F_D \text{add}(a_i)\wedge f$ is false at step $i-1 \wedge i$ is minimal\\
+$|\Bar{P}_1|$ is at most $|F_D|$ as for each fact in the domain only the first action to establish it is included. The rest of the proof is congruent, resulting in a bound of $|F_D|+ |\text{del}_P|$ added actions.\\\\
+Thus, a bound on the required number of delete-relaxed actions needed to complete a plan is: $\min (|A_D|,|F_D|)+ |\text{del}_P|$
+\\\\
+Since this proof also gives a process for making any valid plan into a plan that meets this bound in poly-time, the time complexity of finding a plan meeting this bound is the same as the complexity of finding any valid plan given these rules, which is NP-Complete unless we have total order for the initial plan, in which case it is in P.~\cite{Bercher2021POCLComplexities} 
+
+\section{Future Ideas}
+Code changes:
+\begin{enumerate}
+    \item Change name of HEUR\_3770
+    \item Note all my code as my own with attribution
+    \item ensure there is sufficient documentation
+\end{enumerate}
+
+Make sure to look into whether we can use this heuristic to efficiently determine unsolvability.
+\\\\
+LCFR (least cost flaw repair), maybe store only one plan, and then store additions for branching on top, when there is one addition there is no choice, just modify the original plan and continue. Also think about this for ILPs (can we easily modify this without using loads of repeated calculation).
+\\\\
+removal of actions, with fam-groups or other methods. To get around the fact that in POCL planning there are actions that must necessarily already be in the plan, treat those actions as a new 'required' action (add a new fact with the name of that action, add that fact as an effect of the action and also to the goal state).\\\\
+My current bound only explores the number of actions to insert, not the number of layers to insert (which accounts for executing actions in parallel, how would allowing parallel actions change the bound? (eg can't do parallel after delete effects, because we don't know if there needs to be some specific ordering to ensure preconditions are met, but maybe we can in other places?) see email from Pascal on 28/9 for info.\\\\
+Can SAT techniques be used?
+
+\bibliographystyle{splncs04}
+\bibliography{biblio}
+
+\end{document}

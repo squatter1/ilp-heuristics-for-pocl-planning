@@ -88,7 +88,7 @@ struct Domain {
 
   /* Returns the function table of this domain. */
   const FunctionTable& functions() const { return functions_; }
-
+  
   /* Returns the `total-time' function. */
   const Function& total_time() const { return total_time_; }
 

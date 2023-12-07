@@ -67,6 +67,9 @@ std::ostream& operator<<(std::ostream& os, const Predicate& p);
 // Predicate table.
 class PredicateTable {
  public:
+  // Returns the predicates in this table.
+  const std::map<std::string, Predicate> predicates() const { return predicates_; }
+
   // Adds a parameter with the given type to the given predicate.
   static void add_parameter(const Predicate& predicate, const Type& type);
 

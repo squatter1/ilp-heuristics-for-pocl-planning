@@ -1,0 +1,190 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PARTIAL ORDER PLANNING %
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+@InProceedings{Bercher2021POCLComplexities,
+  author     = {Pascal Bercher},
+  title      = {A Closer Look at Causal Links: Complexity Results for Delete-Relaxation in Partial Order Causal Link (POCL) Planning},
+  booktitle  = {Proceedings of the 31st International Conference on Automated Planning and Scheduling (ICAPS 2021)},
+  year       = {2021},
+  pages      = {36--45},
+  publisher  = {AAAI Press},
+  abstract   = {Partial Order Causal Link (POCL) planning follows the principle of least commitment in that it maintains only a partial order on its actions to prevent unnecessary early commitment during search. This can reduce the search space significantly by systematically representing up to an exponential number of action sequences in just a single search node. Progress on goal achievement is represented fully by this partial order and by causal links, which represent the causal relationships between these actions as well as between the initial state and goal. Plan existence for a state in classical planning thus corresponds to plan existence for a partial plan in POCL planning. Yet almost no theoretical investigations for POCL plan existence were conducted so far. While delete-relaxation makes plan existence tractable in classical planning, we show it to be NP-hard in POCL planning unless the current plan is totally ordered or causal links are almost completely ignored.},
+  url_Paper  = {https://bercher.net/publications/2021/Bercher2021POCLComplexities.pdf},
+  url_Slides = {https://bercher.net/publications/2021/Bercher2021POCLComplexitiesSlides.pdf},
+  url_Poster = {https://bercher.net/publications/2021/Bercher2021POCLComplexitiesPoster.pdf},
+  url_video_of_presentation  = {https://icaps21.icaps-conference.org/papers/exhibition_files/index_37.html}
+}
+
+@InProceedings{Hoeller2020ILP,
+  author    = {Daniel H\"oller and Pascal Bercher and Gregor Behnke},
+  title     = {Delete- and Ordering-Relaxation Heuristics for HTN Planning},
+  booktitle = {Proceedings of the 29th International Joint Conference on Artificial Intelligence (IJCAI 2020)},
+  year      = {2020},
+  publisher = {IJCAI},
+  doi       = {10.24963/ijcai.2020/564},
+  pages     = {4076--4083},
+  abstract  = {In HTN planning, the hierarchy has a wide impact on solutions. First, there is (usually) no state-based goal given, the objective is given via the hierarchy. Second, it enforces actions to be in a plan. Third, planners are not allowed to add actions apart from the hierarchy. However, no heuristic considers the interplay of hierarchy and actions in the plan exactly (without relaxation) because this makes heuristic calculation NP-hard even under delete relaxation. We introduce the problem class of delete- and ordering-free  HTN planning as basis for novel HTN heuristics and show that its plan existence problem is still NP-complete. We then introduce heuristics based on the new class using an integer linear programming model to solve it.},
+  url_Paper = {https://bercher.net/publications/2020/Hoeller2020ILPHTNHeuristics.pdf}
+}
+
+@InProceedings{Bercher2013POCL-DeleteRelaxation,
+  Title      = {On Delete Relaxation in Partial-Order Causal-Link Planning},
+  Author     = {Pascal Bercher and Thomas Geier and Felix Richter and Susanne Biundo},
+  Booktitle  = {Proceedings of the 2013 IEEE 25th International Conference on Tools with Artificial Intelligence ({ICTAI} 2013)},
+  Year       = {2013},
+  Pages      = {674--681},
+  doi        = {10.1109/ICTAI.2013.105},
+  publisher  = {{IEEE} Computer Society},
+  abstract   = {We prove a new complexity result for Partial-Order Causal-Link (POCL) planning, in which we study the hardness of refining a search node (i.e., a partial plan) to a valid solution given a delete effect-free domain model. While the corresponding decision problem is known to be polynomial in state-based search (where search nodes are states), it turns out to be intractable in the POCL setting. Since both of the currently best-informed heuristics for POCL planning are based on delete relaxation, we hope that our result sheds some new light on the problem of designing heuristics for POCL planning. Based on this result, we developed a new variant of one of these heuristics which incorporates more information of the current partial plan. We evaluate our heuristic on several domains of the early International Planning Competitions and compare it with other POCL heuristics from the literature.},
+  url_Paper  = {https://bercher.net/publications/2013/Bercher2013POCL-DeleteRelaxation.pdf},
+  url_Slides = {https://bercher.net/publications/2013/Bercher2013POCL-DeleteRelaxationSlides.pdf},
+}
+
+@InProceedings{Bercher2013POCLHeuristicsViaEncoding,
+  author     = {Pascal Bercher and Thomas Geier and Susanne Biundo},
+  title      = {Using State-Based Planning Heuristics for Partial-Order Causal-Link Planning},
+  booktitle  = {Advances in Artificial Intelligence, Proceedings of the 36th German Conference on Artificial Intelligence ({KI} 2013)},
+  year       = {2013},
+  pages      = {1--12},
+  publisher  = {Springer},
+  doi        = {10.1007/978-3-642-40942-4\_1},
+  abstract   = {We present a technique which allows partial-order causal-link (POCL) planning systems to use heuristics known from state-based planning to guide their search. The technique encodes a given partially ordered partial plan as a new classical planning problem that yields the same set of solutions reachable from the given partial plan. As heuristic estimate of the given partial plan a state-based heuristic can be used estimating the goal distance of the initial state in the encoded problem. This technique also provides the first admissible heuristics for POCL planning, simply by using admissible heuristics from state-based planning. To show the potential of our technique, we conducted experiments where we compared two of the currently strongest heuristics from state-based planning with two of the currently best-informed heuristics from POCL planning.},
+  url_Paper  = {https://bercher.net/publications/2013/Bercher2013POCLHeuristicsViaEncoding.pdf},
+  url_Slides = {https://bercher.net/publications/2013/Bercher2013POCLHeuristicsViaEncodingSlides.pdf}
+}
+
+%%%%%%%%%%%%%%
+% HEURISTICS %
+%%%%%%%%%%%%%%
+
+@article{imai2015practical,
+  title={On a practical, integer-linear programming model for delete-free tasks and its use as a heuristic for cost-optimal planning},
+  author={Imai, Tatsuya and Fukunaga, Alex},
+  journal={Journal of Artificial Intelligence Research},
+  volume={54},
+  pages={631--677},
+  year={2015}
+}
+
+@inproceedings{Bylander1997ILP,
+  title={A linear programming heuristic for optimal planning},
+  author={Bylander, Tom},
+  booktitle={AAAI/IAAI},
+  pages={694--699},
+  year={1997},
+  organization={Citeseer}
+}
+
+@article{kautz2000integer,
+  title={Integer optimization models of AI planning problems},
+  author={Kautz, Henry and Walser, Joachim P},
+  journal={The Knowledge Engineering Review},
+  volume={15},
+  number={1},
+  pages={101--117},
+  year={2000},
+  publisher={Cambridge University Press}
+}
+
+@article{Imai2015ILPDeleteFree,
+  title={On a practical, integer-linear programming model for delete-free tasks and its use as a heuristic for cost-optimal planning},
+  author={Imai, Tatsuya and Fukunaga, Alex},
+  journal={Journal of Artificial Intelligence Research},
+  volume={54},
+  pages={631--677},
+  year={2015}
+}
+
+@inproceedings{haslum2009hm,
+  title={hm (P)= h1 (Pm): Alternative characterisations of the generalisation from hmax to hm},
+  author={Haslum, Patrik},
+  booktitle={Proceedings of the International Conference on Automated Planning and Scheduling},
+  volume={19},
+  pages={354--357},
+  year={2009}
+}
+
+@inproceedings{pommerening2014lp,
+  title={LP-based heuristics for cost-optimal planning},
+  author={Pommerening, Florian and R{\"o}ger, Gabriele and Helmert, Malte and Bonet, Blai},
+  booktitle={Proceedings of the International Conference on Automated Planning and Scheduling},
+  volume={24},
+  pages={226--234},
+  year={2014}
+}
+
+@inproceedings{pommerening2015non,
+  title={From non-negative to general operator cost partitioning},
+  author={Pommerening, Florian and Helmert, Malte and R{\"o}ger, Gabriele and Seipp, Jendrik},
+  booktitle={Proceedings of the AAAI conference on artificial intelligence},
+  volume={29},
+  number={1},
+  year={2015}
+}
+
+@article{pommerening2015heuristics,
+  title={Heuristics for cost-optimal classical planning based on linear programming},
+  author={Pommerening, Florian and R{\"o}ger, Gabriele and Helmert, Malte and Bonet, Blai},
+  year={2015},
+  publisher={AAAI Press}
+}
+
+@article{roger2015linear,
+  title={Linear programming for heuristics in optimal planning},
+  author={R{\"o}ger, Gabriele and Pommerening, Florian},
+  year={2015},
+  publisher={AAAI Press}
+}
+
+@article{singh2023lifted,
+  title={Lifted Sequential Planning with Lazy Constraint Generation Solvers},
+  author={Singh, Anubhav and Ramirez, Miquel and Lipovetzky, Nir and Stuckey, Peter J},
+  journal={arXiv preprint arXiv:2307.08242},
+  year={2023}
+}
+
+@inproceedings{nguyen2001reviving,
+  title={Reviving partial order planning},
+  author={Nguyen, XuanLong and Kambhampati, Subbarao},
+  booktitle={IJCAI},
+  volume={1},
+  pages={459--464},
+  year={2001}
+}
+
+@article{younes2003vhpop,
+  title={VHPOP: Versatile heuristic partial order planner},
+  author={Younes, H{\aa}kan LS and Simmons, Reid G},
+  journal={Journal of Artificial Intelligence Research},
+  volume={20},
+  pages={405--430},
+  year={2003}
+}
+
+@InProceedings{Bercher13EncodingPlans,
+  author    = {Pascal Bercher and Susanne Biundo},
+  title     = {Encoding Partial Plans for Heuristic Search},
+  booktitle = {Proceedings of the 4th Workshop on Knowledge Engineering for Planning and Scheduling ({KEPS} 2013)},
+  year      = {2013},
+  pages     = {11--15},
+  abstract  = {We propose a technique that allows any planning system that searches in the space of partial plans to make use of heuristics from the literature which are based on search in the space of states. The technique uses a problem encoding that reduces the problem of finding a heuristic value for a partial plan to finding a heuristic value for a state: It encodes a partial plan into a new planning problem, s.t. solutions for the new problem correspond to solutions reachable from the partial plan. Evaluating the goal distance of the partial plan then corresponds to evaluating the goal distance of the initial state in the new planning problem.},
+  url_Paper  = {https://bercher.net/publications/2013/Bercher2013EncodingPlans.pdf},
+  url_Slides = {https://bercher.net/publications/2013/Bercher2013EncodingPlansSlides.pdf}
+}
+
+
+
+%%%%%%%%%%%%%
+% GROUNDING %
+%%%%%%%%%%%%%
+
+@inproceedings{fivser2020lifted,
+  title={Lifted fact-alternating mutex groups and pruned grounding of classical planning problems},
+  author={Fi{\v{s}}er, Daniel},
+  booktitle={Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume={34},
+  number={06},
+  pages={9835--9842},
+  year={2020}
+}

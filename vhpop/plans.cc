@@ -911,7 +911,7 @@ bool Plan::complete() const {
    signifies a better plan. */
 float Plan::primary_rank() const {
   if (rank_.empty()) {
-    params->heuristic.plan_rank(rank_, *this, params->weight, *domain,
+    params->heuristic.plan_rank(rank_, *this, params->weight, *domain, *problem,
                                 planning_graph);
   }
   return rank_[0];
