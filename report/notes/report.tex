@@ -29,6 +29,9 @@
 TODO  
 \end{abstract}
 
+\section{Important Notes}
+Try changing between stat_mda and stat_mdd for the CPLEX path in tasks.json, as it could change performance.
+
 \section{Current plan for completing the project}
 \begin{enumerate}
     \item Write more fancy ideas into future work to note things that can be done later
@@ -65,8 +68,11 @@ Note how solving a classical plan with a solver is PSPACE-complete ~\cite{Berche
     \item An ILP model for delete free classical planning with constraints, superceded by ~\cite{pommerening2014lp} but still a useful paper as it is more directly connected, contains IP model enhancements. Note the terminology, eg. 'first achiever', relevant to some things eg bound proof~\cite{imai2015practical}
 \end{itemize}
 \section{Current Results}
-LOOK INTO: bound of $|G\setminus I|+|del_P|+|P|$
+\subsection{ILP Formulation}
+\subsubsection{Variables}
+\textbf{Proposition variables:} ss\\
 \subsection{Bound on number of inserted actions}
+LOOK INTO: bound of $|G\setminus I|+|del_P|+|P|$\\\\
 Bound for required number of actions to add to complete plan is: \[\min (|A_D|,|F_D|)+ |\text{del}_P|\]
 Proof that $|A_D|+ |\text{del}_P|$ is a bound:\\
 Let $P$ be a partial order plan, and let $\Bar{P}$ be any total order completion of $P$ by adding delete-relaxed actions.\\
