@@ -36,8 +36,7 @@
 #include "plans.h"
 #include "problems.h"
 #include "terms.h"
-
-#include "ilcplex/ilocplex.h"
+#include "ilp.h"
 
 /* Generates a random number in the interval [0,1). */
 static double rand01ex() {
@@ -1092,6 +1091,11 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     os << "Domain: " << std::endl;
     os << domain << std::endl;
     os << "****************************************" << std::endl;
+
+    // Call the example ILP from ilp.h
+    os << "Calling example ILP: " << std::endl;
+    example_ILP();
+
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
       // We start with an empty rank vector, we need to use rank.push_back to give a rank to this specific plan
