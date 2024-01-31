@@ -145,6 +145,12 @@ class ActionSchema : public Action {
   void instantiations(std::vector<const GroundAction*>& actions,
                       const Problem& problem) const;
 
+  // Return the condition of this action schema.
+  const Formula& schema_condition() const;
+
+  // List of action schema effects.
+  const EffectList& schema_effects() const;
+
   // Prints this action on the given stream.
   void print(std::ostream& os) const;
 

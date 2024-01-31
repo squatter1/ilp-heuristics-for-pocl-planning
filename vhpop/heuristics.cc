@@ -30,13 +30,15 @@
 #include "chain.h"
 #include "debug.h"
 #include "domains.h"
+#include "effects.h"
+#include "formulas.h"
 #include "flaws.h"
+#include "ilp.h"
 #include "orderings.h"
 #include "parameters.h"
 #include "plans.h"
 #include "problems.h"
 #include "terms.h"
-#include "ilp.h"
 
 /* Generates a random number in the interval [0,1). */
 static double rand01ex() {
@@ -1030,16 +1032,20 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     os << "+++++++++++++++++++++++++++++++++++++++++++" << std::endl;
     // Print the initial atoms
     os << "Init: ";
-    AtomSet init = problem.init_atoms();
-    for (AtomSet::const_iterator ai = init.begin();
+    AtomSet init_atoms = problem.init_atoms();
+    std::set<std::string> init;
+    for (AtomSet::const_iterator ai = init_atoms.begin();
+         ai != init_atoms.end(); ai++) {
+      init.insert(PredicateTable::name((*ai)->predicate()));
+    }
+    for (std::set<std::string>::const_iterator ai = init.begin();
          ai != init.end(); ai++) {
-      os << ' ';
-      (*ai)->print(os, 0, Bindings::EMPTY);
+      os << ' ' << *ai;
     }
     os << std::endl;
     os << "----------------------------------------" << std::endl;
     // Initialise empty goal AtomSet
-    AtomSet goal = AtomSet();
+    std::set<std::string> goal;
     // Iterate through the conjuncts in this goal
     const Formula& goal_formula = problem.goal();
     const Conjunction* goal_conjunctions = dynamic_cast<const Conjunction*>(&goal_formula);
@@ -1052,7 +1058,7 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
         const Atom* atom = dynamic_cast<const Atom*>(conjunct);
         if (atom) {
           // Add to goal AtomSet
-          goal.insert(atom);
+          goal.insert(PredicateTable::name((*atom).predicate()));
         } else {
           os << "Not an atom" << std::endl;
         }
@@ -1062,39 +1068,108 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     }
     // Print the goal atoms
     os << "Goal: ";
-    for (AtomSet::const_iterator ai = goal.begin();
+    for (std::set<std::string>::const_iterator ai = goal.begin();
          ai != goal.end(); ai++) {
-      os << ' ';
-      (*ai)->print(os, 0, Bindings::EMPTY);
+      os << ' ' << *ai;
     }
     os << std::endl;
     os << "----------------------------------------" << std::endl;
-    os << "Problem:" << std::endl;
-    os << problem << std::endl;
-    os << "----------------------------------------" << std::endl;
     // Get all predicates from the domain
-    PredicateTable predicates = domain.predicates();
-    // Print the predicates
-    os << "Predicates: " << std::endl;
-    os << predicates << std::endl;
+    const std::map<std::string, Predicate> predicates = domain.predicates().predicates();
+    // Create a set of strings called props to store the propositions
+    std::set<std::string> props;
+    // Iterate through the predicates
+    for (std::map<std::string, Predicate>::const_iterator ai =
+             predicates.begin();
+         ai != predicates.end(); ai++) {
+      // Add the predicate name to the set of propositions
+      props.insert((*ai).first);
+    }
+    // Print the propositions
+    os << "Predicates:";
+    for (std::set<std::string>::const_iterator ai = props.begin();
+         ai != props.end(); ai++) {
+      os << ' ' << *ai;
+    }
+    os << std::endl;
     os << "****************************************" << std::endl;
     // Get all actions from the domain
     os << "Actions: " << std::endl;
     for (std::map<std::string, const ActionSchema*>::const_iterator ai =
              domain.actions().begin();
          ai != domain.actions().end(); ai++) {
+      // Print the action name and schema
       os << std::endl;
-      (*ai).second->print(os);
+      os << "Name: " << (*ai).first << std::endl;
+
+      // Initialise empty preconditions AtomSet
+      std::set<std::string> precondition;
+      // Iterate through the conjuncts in the preconditions
+      const Formula& condition_formula = (*ai).second->schema_condition();
+      const Conjunction* precondition_conjunctions = dynamic_cast<const Conjunction*>(&condition_formula);
+      if (precondition_conjunctions) {
+        // Access conjuncts_ directly as member variable
+        for (FormulaList::const_iterator it = precondition_conjunctions->conjuncts().begin();
+             it != precondition_conjunctions->conjuncts().end(); ++it) {
+          const Formula* conjunct = *it;
+          // Get the atom
+          const Atom* atom = dynamic_cast<const Atom*>(conjunct);
+          if (atom) {
+            // Add to precondition AtomSet
+            precondition.insert(PredicateTable::name((*atom).predicate()));
+          } else {
+            os << "Not an atom" << std::endl;
+          }
+        }
+      } else {
+        os << "Not a conjunction" << std::endl;
+      }
+      // Print the precondition atoms
+      os << "Precondition: ";
+      for (std::set<std::string>::const_iterator ai = precondition.begin();
+           ai != precondition.end(); ai++) {
+        os << ' ' << *ai;
+      }
+      os << std::endl;
+
+      // Initialise empty effects AtomSets
+      std::set<std::string> add_effects;
+      std::set<std::string> del_effects;
+      // Iterate through the EffectList
+      const EffectList& effect_list = (*ai).second->schema_effects();
+      for (EffectList::const_iterator ei = effect_list.begin(); ei != effect_list.end();
+           ei++) {
+        // Get the literal of this effect
+        const Literal& literal = (*ei)->literal();
+        // Get the atom of this literal
+        const Atom* atom = &literal.atom();
+        // Check for negation
+        const Negation* negation = dynamic_cast<const Negation*>(&literal);
+        if (negation) {
+          del_effects.insert(PredicateTable::name((*atom).predicate()));
+        } else {
+          add_effects.insert(PredicateTable::name((*atom).predicate()));
+        }
+      }
+      // Print the effect atoms
+      os << "Add Effects: ";
+      for (std::set<std::string>::const_iterator ai = add_effects.begin();
+           ai != add_effects.end(); ai++) {
+        os << ' ' << *ai;
+      }
+      os << std::endl;
+      os << "Delete Effects: ";
+      for (std::set<std::string>::const_iterator ai = del_effects.begin();
+           ai != del_effects.end(); ai++) {
+        os << ' ' << *ai;
+      }
+      os << std::endl;
     }
-    os << "****************************************" << std::endl;
-    // Get the domain
-    os << "Domain: " << std::endl;
-    os << domain << std::endl;
     os << "****************************************" << std::endl;
 
     // Call the example ILP from ilp.h
-    os << "Calling example ILP: " << std::endl;
-    example_ILP();
+    //os << "Calling example ILP: " << std::endl;
+    //example_ILP();
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */

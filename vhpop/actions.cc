@@ -249,6 +249,10 @@ const GroundAction* ActionSchema::instantiation(
   }
 }
 
+const Formula& ActionSchema::schema_condition() const { return condition(); }
+
+const EffectList& ActionSchema::schema_effects() const { return effects(); }
+
 void ActionSchema::print(std::ostream& os) const {
   os << "  " << name();
   os << std::endl << "    parameters:";
