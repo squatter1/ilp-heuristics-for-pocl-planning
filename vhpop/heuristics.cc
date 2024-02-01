@@ -1024,6 +1024,8 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
        hi != h_.end(); hi++) {
     HVal h = *hi;
     // Debugging code TODO remove
+    // Create an IlpProblem
+    IlpProblem ilpProblem = IlpProblem(problem.name());
     // Define the osstream
     std::ostream& os = std::cout;
     // Use plan output operator std::ostream& operator<<(std::ostream& os, const Plan& p) {
@@ -1037,6 +1039,7 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     for (AtomSet::const_iterator ai = init_atoms.begin();
          ai != init_atoms.end(); ai++) {
       init.insert(PredicateTable::name((*ai)->predicate()));
+      ilpProblem.add_init_prop(PredicateTable::name((*ai)->predicate()));
     }
     for (std::set<std::string>::const_iterator ai = init.begin();
          ai != init.end(); ai++) {
@@ -1059,6 +1062,7 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
         if (atom) {
           // Add to goal AtomSet
           goal.insert(PredicateTable::name((*atom).predicate()));
+          ilpProblem.add_goal_prop(PredicateTable::name((*atom).predicate()));
         } else {
           os << "Not an atom" << std::endl;
         }
@@ -1074,21 +1078,22 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     }
     os << std::endl;
     os << "----------------------------------------" << std::endl;
-    // Get all predicates from the domain
+    // Get all atoms from the domain
     const std::map<std::string, Predicate> predicates = domain.predicates().predicates();
-    // Create a set of strings called props to store the propositions
-    std::set<std::string> props;
-    // Iterate through the predicates
+    // Create a set of strings called atoms to store the atoms
+    std::set<std::string> atoms;
+    // Iterate through the atoms
     for (std::map<std::string, Predicate>::const_iterator ai =
              predicates.begin();
          ai != predicates.end(); ai++) {
       // Add the predicate name to the set of propositions
-      props.insert((*ai).first);
+      atoms.insert((*ai).first);
+      ilpProblem.add_prop((*ai).first);
     }
     // Print the propositions
-    os << "Predicates:";
-    for (std::set<std::string>::const_iterator ai = props.begin();
-         ai != props.end(); ai++) {
+    os << "Atoms:";
+    for (std::set<std::string>::const_iterator ai = atoms.begin();
+         ai != atoms.end(); ai++) {
       os << ' ' << *ai;
     }
     os << std::endl;
@@ -1098,6 +1103,9 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     for (std::map<std::string, const ActionSchema*>::const_iterator ai =
              domain.actions().begin();
          ai != domain.actions().end(); ai++) {
+      // Create an ilpAction
+      IlpAction* ilpAction = new IlpAction((*ai).first);
+
       // Print the action name and schema
       os << std::endl;
       os << "Name: " << (*ai).first << std::endl;
@@ -1105,7 +1113,7 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
       // Initialise empty preconditions AtomSet
       std::set<std::string> precondition;
       // Iterate through the conjuncts in the preconditions
-      const Formula& condition_formula = (*ai).second->schema_condition();
+      const Formula& condition_formula = (*ai).second->condition();
       const Conjunction* precondition_conjunctions = dynamic_cast<const Conjunction*>(&condition_formula);
       if (precondition_conjunctions) {
         // Access conjuncts_ directly as member variable
@@ -1117,6 +1125,8 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
           if (atom) {
             // Add to precondition AtomSet
             precondition.insert(PredicateTable::name((*atom).predicate()));
+            // Add to ilpAction
+            (*ilpAction).add_condition(PredicateTable::name((*atom).predicate()));
           } else {
             os << "Not an atom" << std::endl;
           }
@@ -1136,7 +1146,7 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
       std::set<std::string> add_effects;
       std::set<std::string> del_effects;
       // Iterate through the EffectList
-      const EffectList& effect_list = (*ai).second->schema_effects();
+      const EffectList& effect_list = (*ai).second->effects();
       for (EffectList::const_iterator ei = effect_list.begin(); ei != effect_list.end();
            ei++) {
         // Get the literal of this effect
@@ -1149,6 +1159,7 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
           del_effects.insert(PredicateTable::name((*atom).predicate()));
         } else {
           add_effects.insert(PredicateTable::name((*atom).predicate()));
+          (*ilpAction).add_pos_effect(PredicateTable::name((*atom).predicate()));
         }
       }
       // Print the effect atoms
@@ -1164,7 +1175,13 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
         os << ' ' << *ai;
       }
       os << std::endl;
+      os << "ilpAction: ";
+      (*ilpAction).print(os, "");
+      ilpProblem.add_action(ilpAction);
     }
+    os << "****************************************" << std::endl;
+    os << "Printing ILP problem: " << std::endl;
+    os << ilpProblem;
     os << "****************************************" << std::endl;
 
     // Call the example ILP from ilp.h
