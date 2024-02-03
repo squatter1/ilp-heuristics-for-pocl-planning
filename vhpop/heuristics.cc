@@ -1183,6 +1183,10 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     os << "Printing ILP problem: " << std::endl;
     os << ilpProblem;
     os << "****************************************" << std::endl;
+    // Solve the ILP problem
+    os << "Solving ILP problem: " << std::endl;
+    const size_t solutionLength = ilpProblem.solve(os);
+    os << "Solution length: " << solutionLength << std::endl;
 
     // Call the example ILP from ilp.h
     //os << "Calling example ILP: " << std::endl;
