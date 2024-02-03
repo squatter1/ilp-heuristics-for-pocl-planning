@@ -78,7 +78,7 @@ void IlpProblem::add_goal_prop(std::string prop) {
   goal_.insert(prop);
 }
 
-const size_t IlpProblem::solve(std::ostream& os) {
+const size_t IlpProblem::solve(std::ostream& os, bool verbose) const {
   IloEnv env;
   try {
     IloModel model(env);  
@@ -102,11 +102,9 @@ const size_t IlpProblem::solve(std::ostream& os) {
 
     for (std::set<std::string>::const_iterator ai = props_.begin();
          ai != props_.end(); ai++) {
-      os << "Adding prop: " << "PA-" + (*ai) << " | " << ("PA-" + (*ai)).c_str() << std::endl;
       IloNumVar propVar(env, 0, 1, IloNumVar::Bool);
       propVars.add(propVar);
       prop[("PA-" + (*ai)).c_str()] = propVars.getSize() - 1;
-      os << "Adding prop time: " << "PT-" + (*ai) << " | " << ("PT-" + (*ai)).c_str() << std::endl;
       IloNumVar propTimeVar(env, 0, numActions, IloNumVar::Int);
       propTimeVars.add(propTimeVar);
       propTime[("PT-" + (*ai)).c_str()] = propTimeVars.getSize() - 1;
@@ -116,17 +114,14 @@ const size_t IlpProblem::solve(std::ostream& os) {
     for (std::map<std::string, const IlpAction*>::const_iterator ai =
              actions_.begin();
          ai != actions_.end(); ai++) {
-      os << "Adding action: " << "AU-" + (*ai).first << " | " << ("AU-" + (*ai).first).c_str() << std::endl;
       IloNumVar actionVar(env, 0, 1, IloNumVar::Bool);
       actionVars.add(actionVar);
       action[("AU-" + (*ai).first).c_str()] = actionVars.getSize() - 1;
-      os << "Adding action time: " << "AT-" + (*ai).first << " | " << ("AT-" + (*ai).first).c_str() << std::endl;
       IloNumVar actionTimeVar(env, 0, numActions, IloNumVar::Int);
       actionTimeVars.add(actionTimeVar);
       actionTime[("AT-" + (*ai).first).c_str()] = actionTimeVars.getSize() - 1;
       for (std::set<std::string>::const_iterator ei = (*ai).second->effects().begin();
            ei != (*ai).second->effects().end(); ei++) {
-        os << "Adding add effect: " << "AE-" + (*ai).first + (*ei) << " | " << ("AE-" + (*ai).first + "->" + (*ei)).c_str() << std::endl;
         IloNumVar addEffectVar(env, 0, 1, IloNumVar::Bool);
         addEffectVars.add(addEffectVar);
         addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()] = addEffectVars.getSize() - 1;
@@ -139,7 +134,6 @@ const size_t IlpProblem::solve(std::ostream& os) {
     // Constraint set 1: The goals must be achieved
     for (std::set<std::string>::const_iterator ai = goal_.begin();
          ai != goal_.end(); ai++) {
-      os << "Adding goal: " << "PA-" + (*ai) << " | " << ("PA-" + (*ai)).c_str() << std::endl;
       model.add(propVars[prop[("PA-" + (*ai)).c_str()]] == 1);
     }
 
@@ -149,7 +143,6 @@ const size_t IlpProblem::solve(std::ostream& os) {
          ai != actions_.end(); ai++) {
       for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
            ci != (*ai).second->conditions().end(); ci++) {
-        os << "Adding precondition: " << "PA-" + (*ci) << " | " << ("PA-" + (*ci)).c_str() << std::endl;
         model.add(propVars[prop[("PA-" + (*ci)).c_str()]] >= actionVars[action[("AU-" + (*ai).first).c_str()]]);
       }
     }
@@ -160,7 +153,6 @@ const size_t IlpProblem::solve(std::ostream& os) {
          ai != actions_.end(); ai++) {
       for (std::set<std::string>::const_iterator ei = (*ai).second->effects().begin();
            ei != (*ai).second->effects().end(); ei++) {
-        os << "Adding first achiever: " << "AU-" + (*ai).first << " | " << ("AU-" + (*ai).first).c_str() << std::endl;
         model.add(actionVars[action[("AU-" + (*ai).first).c_str()]] >= addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]]);
       }
     }
@@ -177,7 +169,6 @@ const size_t IlpProblem::solve(std::ostream& os) {
           propAddEffects.add(addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]]);
         }
       }
-      os << "Adding prop causation: " << "PA-" + (*pi) << " | " << ("PA-" + (*pi)).c_str() << std::endl;
       model.add(propVars[prop[("PA-" + (*pi)).c_str()]] == init_.count(*pi) + IloSum(propAddEffects));
     }
 
@@ -187,7 +178,6 @@ const size_t IlpProblem::solve(std::ostream& os) {
          ai != actions_.end(); ai++) {
       for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
            ci != (*ai).second->conditions().end(); ci++) {
-        os << "Adding precondition time: " << "PT-" + (*ci) << " | " << ("PT-" + (*ci)).c_str() << std::endl;
         model.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]] >= propTimeVars[propTime[("PT-" + (*ci)).c_str()]]);
       }
     }
@@ -199,7 +189,6 @@ const size_t IlpProblem::solve(std::ostream& os) {
       for (std::set<std::string>::const_iterator ei = (*ai).second->effects().begin();
            ei != (*ai).second->effects().end(); ei++) {
         const size_t M = numActions + 1;
-        os << "Adding first achiever time: " << "PT-" + (*ei) << " | " << ("PT-" + (*ei)).c_str() << std::endl;
         model.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]] + 1 <=
                   propTimeVars[propTime[("PT-" + (*ei)).c_str()]] + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]]));
       }
@@ -209,46 +198,63 @@ const size_t IlpProblem::solve(std::ostream& os) {
 
     // Optimize the problem and obtain solution.
     if ( !cplex.solve() ) {
-       env.error() << "Failed to optimize LP" << std::endl;
-       throw(-1);
+      env.error() << "Failed to optimize LP" << std::endl;
+      throw(-1);
     }
 
     IloNumArray vals(env);
-    env.out() << "Solution status = " << cplex.getStatus() << std::endl;
     const size_t objectiveValue = static_cast<size_t>(cplex.getObjValue());
-    env.out() << "Solution value  = " << objectiveValue << std::endl;
-    cplex.getValues(vals, propVars);
-    env.out() << "Prop vals" << vals << std::endl;
+    if (verbose) {
+      // TODO: create a function which will return a 'solution graph' eg print init props, then first action, then any added props, then next action, etc (mark goal props)
+      env.out() << "Solution status = " << cplex.getStatus() << std::endl;
+      env.out() << "Solution value  = " << objectiveValue << std::endl;
+      cplex.getValues(vals, propVars);
+      env.out() << "Prop vals" << vals << std::endl;
+      for (std::map<std::string, int>::const_iterator ai = prop.begin();
+           ai != prop.end(); ai++) {
+        os << "Prop " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
+      }
+      cplex.getValues(vals, propTimeVars);
+      env.out() << "Prop Time vals" << vals << std::endl;
+      for (std::map<std::string, int>::const_iterator ai = propTime.begin();
+           ai != propTime.end(); ai++) {
+        os << "Prop Time " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
+      }
+      cplex.getValues(vals, actionVars);
+      env.out() << "Action vals" << vals << std::endl;
+      std::map<std::string, int> actionVals;
+      for (std::map<std::string, int>::const_iterator ai = action.begin();
+           ai != action.end(); ai++) {
+        os << "Action " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
+        actionVals[(*ai).first] = vals[(*ai).second];
+      }
+      cplex.getValues(vals, actionTimeVars);
+      env.out() << "Action Time vals" << vals << std::endl;
+      std::map<int, std::string> actionTimeVals;
+      for (std::map<std::string, int>::const_iterator ai = actionTime.begin();
+           ai != actionTime.end(); ai++) {
+        os << "Action Time " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
+        actionTimeVals[vals[(*ai).second]] = (*ai).first;
+      }
+      cplex.getValues(vals, addEffectVars);
+      env.out() << "Add Effect vals" << vals << std::endl;
+      for (std::map<std::string, int>::const_iterator ai = addEffect.begin();
+           ai != addEffect.end(); ai++) {
+        os << "Add Effect " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
+      }
 
-    for (std::map<std::string, int>::const_iterator ai = prop.begin();
-         ai != prop.end(); ai++) {
-      os << "Prop " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
-    }
-    cplex.getValues(vals, propTimeVars);
-    env.out() << "Prop Time vals" << vals << std::endl;
-    for (std::map<std::string, int>::const_iterator ai = propTime.begin();
-         ai != propTime.end(); ai++) {
-      os << "Prop Time " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
-    }
-    cplex.getValues(vals, actionVars);
-    env.out() << "Action vals" << vals << std::endl;
-    for (std::map<std::string, int>::const_iterator ai = action.begin();
-         ai != action.end(); ai++) {
-      os << "Action " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
-    }
-    cplex.getValues(vals, actionTimeVars);
-    env.out() << "Action Time vals" << vals << std::endl;
-    for (std::map<std::string, int>::const_iterator ai = actionTime.begin();
-         ai != actionTime.end(); ai++) {
-      os << "Action Time " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
-    }
-    cplex.getValues(vals, addEffectVars);
-    env.out() << "Add Effect vals" << vals << std::endl;
-    for (std::map<std::string, int>::const_iterator ai = addEffect.begin();
-         ai != addEffect.end(); ai++) {
-      os << "Add Effect " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
-    }
-    // TODO: create a function which will return a 'solution graph' eg print init props, then first action, then any added props, then next action, etc (mark goal props)
+      // Iterate through the sorted action time values and print each action if it is used
+      os << "INIT ->";
+      for (std::map<int, std::string>::const_iterator ai = actionTimeVals.begin();
+           ai != actionTimeVals.end(); ai++) {
+        if (actionVals["AU" + (*ai).second.substr(2)] == 1) {
+          os << (*ai).second.substr(3) << " -> ";
+        }
+      }
+      os << "GOAL" << std::endl;
+      }
+
+    env.end();
     return objectiveValue;
   }
   catch (IloException& e) {

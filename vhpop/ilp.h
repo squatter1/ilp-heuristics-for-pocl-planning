@@ -99,7 +99,7 @@ struct IlpProblem {
   const std::set<std::string>& goal() const { return goal_; }
 
   /* Finds the shortest solution length of this delete-relaxed problem with an ILP */
-  const size_t solve(std::ostream& os);
+  const size_t solve(std::ostream& os, bool verbose = false) const;
 
 private:
   /* Name of this ILP problem. */

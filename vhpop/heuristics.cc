@@ -1185,7 +1185,7 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     os << "****************************************" << std::endl;
     // Solve the ILP problem
     os << "Solving ILP problem: " << std::endl;
-    const size_t solutionLength = ilpProblem.solve(os);
+    const size_t solutionLength = ilpProblem.solve(os, true);
     os << "Solution length: " << solutionLength << std::endl;
 
     // Call the example ILP from ilp.h
