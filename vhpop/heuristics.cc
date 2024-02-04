@@ -1024,173 +1024,76 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
        hi != h_.end(); hi++) {
     HVal h = *hi;
     // Debugging code TODO remove
-    // Create an IlpProblem
-    IlpProblem ilpProblem = IlpProblem(problem.name());
     // Define the osstream
     std::ostream& os = std::cout;
-    // Use plan output operator std::ostream& operator<<(std::ostream& os, const Plan& p) {
-    // to print the plan to the output stream
-    os << plan << std::endl;
     os << "+++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-    // Print the initial atoms
-    os << "Init: ";
-    AtomSet init_atoms = problem.init_atoms();
-    std::set<std::string> init;
-    for (AtomSet::const_iterator ai = init_atoms.begin();
-         ai != init_atoms.end(); ai++) {
-      init.insert(PredicateTable::name((*ai)->predicate()));
-      ilpProblem.add_init_prop(PredicateTable::name((*ai)->predicate()));
-    }
-    for (std::set<std::string>::const_iterator ai = init.begin();
-         ai != init.end(); ai++) {
-      os << ' ' << *ai;
-    }
-    os << std::endl;
-    os << "----------------------------------------" << std::endl;
-    // Initialise empty goal AtomSet
-    std::set<std::string> goal;
-    // Iterate through the conjuncts in this goal
-    const Formula& goal_formula = problem.goal();
-    const Conjunction* goal_conjunctions = dynamic_cast<const Conjunction*>(&goal_formula);
-    if (goal_conjunctions) {
-      // Access conjuncts_ directly as member variable
-      for (FormulaList::const_iterator it = goal_conjunctions->conjuncts().begin();
-           it != goal_conjunctions->conjuncts().end(); ++it) {
-        const Formula* conjunct = *it;
-        // Get the atom
-        const Atom* atom = dynamic_cast<const Atom*>(conjunct);
-        if (atom) {
-          // Add to goal AtomSet
-          goal.insert(PredicateTable::name((*atom).predicate()));
-          ilpProblem.add_goal_prop(PredicateTable::name((*atom).predicate()));
-        } else {
-          os << "Not an atom" << std::endl;
-        }
-      }
-    } else {
-      os << "Not a conjunction" << std::endl;
-    }
-    // Print the goal atoms
-    os << "Goal: ";
-    for (std::set<std::string>::const_iterator ai = goal.begin();
-         ai != goal.end(); ai++) {
-      os << ' ' << *ai;
-    }
-    os << std::endl;
-    os << "----------------------------------------" << std::endl;
-    // Get all atoms from the domain
-    const std::map<std::string, Predicate> predicates = domain.predicates().predicates();
-    // Create a set of strings called atoms to store the atoms
-    std::set<std::string> atoms;
-    // Iterate through the atoms
-    for (std::map<std::string, Predicate>::const_iterator ai =
-             predicates.begin();
-         ai != predicates.end(); ai++) {
-      // Add the predicate name to the set of propositions
-      atoms.insert((*ai).first);
-      ilpProblem.add_prop((*ai).first);
-    }
-    // Print the propositions
-    os << "Atoms:";
-    for (std::set<std::string>::const_iterator ai = atoms.begin();
-         ai != atoms.end(); ai++) {
-      os << ' ' << *ai;
-    }
-    os << std::endl;
-    os << "****************************************" << std::endl;
-    // Get all actions from the domain
-    os << "Actions: " << std::endl;
-    for (std::map<std::string, const ActionSchema*>::const_iterator ai =
-             domain.actions().begin();
-         ai != domain.actions().end(); ai++) {
-      // Create an ilpAction
-      IlpAction* ilpAction = new IlpAction((*ai).first);
-
-      // Print the action name and schema
-      os << std::endl;
-      os << "Name: " << (*ai).first << std::endl;
-
-      // Initialise empty preconditions AtomSet
-      std::set<std::string> precondition;
-      // Iterate through the conjuncts in the preconditions
-      const Formula& condition_formula = (*ai).second->condition();
-      const Conjunction* precondition_conjunctions = dynamic_cast<const Conjunction*>(&condition_formula);
-      if (precondition_conjunctions) {
-        // Access conjuncts_ directly as member variable
-        for (FormulaList::const_iterator it = precondition_conjunctions->conjuncts().begin();
-             it != precondition_conjunctions->conjuncts().end(); ++it) {
-          const Formula* conjunct = *it;
-          // Get the atom
-          const Atom* atom = dynamic_cast<const Atom*>(conjunct);
-          if (atom) {
-            // Add to precondition AtomSet
-            precondition.insert(PredicateTable::name((*atom).predicate()));
-            // Add to ilpAction
-            (*ilpAction).add_condition(PredicateTable::name((*atom).predicate()));
-          } else {
-            os << "Not an atom" << std::endl;
-          }
-        }
-      } else {
-        os << "Not a conjunction" << std::endl;
-      }
-      // Print the precondition atoms
-      os << "Precondition: ";
-      for (std::set<std::string>::const_iterator ai = precondition.begin();
-           ai != precondition.end(); ai++) {
-        os << ' ' << *ai;
-      }
-      os << std::endl;
-
-      // Initialise empty effects AtomSets
-      std::set<std::string> add_effects;
-      std::set<std::string> del_effects;
-      // Iterate through the EffectList
-      const EffectList& effect_list = (*ai).second->effects();
-      for (EffectList::const_iterator ei = effect_list.begin(); ei != effect_list.end();
-           ei++) {
-        // Get the literal of this effect
-        const Literal& literal = (*ei)->literal();
-        // Get the atom of this literal
-        const Atom* atom = &literal.atom();
-        // Check for negation
-        const Negation* negation = dynamic_cast<const Negation*>(&literal);
-        if (negation) {
-          del_effects.insert(PredicateTable::name((*atom).predicate()));
-        } else {
-          add_effects.insert(PredicateTable::name((*atom).predicate()));
-          (*ilpAction).add_pos_effect(PredicateTable::name((*atom).predicate()));
-        }
-      }
-      // Print the effect atoms
-      os << "Add Effects: ";
-      for (std::set<std::string>::const_iterator ai = add_effects.begin();
-           ai != add_effects.end(); ai++) {
-        os << ' ' << *ai;
-      }
-      os << std::endl;
-      os << "Delete Effects: ";
-      for (std::set<std::string>::const_iterator ai = del_effects.begin();
-           ai != del_effects.end(); ai++) {
-        os << ' ' << *ai;
-      }
-      os << std::endl;
-      os << "ilpAction: ";
-      (*ilpAction).print(os, "");
-      ilpProblem.add_action(ilpAction);
-    }
-    os << "****************************************" << std::endl;
+    // Print the ILP problem
     os << "Printing ILP problem: " << std::endl;
+    const IlpProblem ilpProblem = IlpProblem(problem);
     os << ilpProblem;
-    os << "****************************************" << std::endl;
+    os << "-------------------------------------------" << std::endl;
     // Solve the ILP problem
     os << "Solving ILP problem: " << std::endl;
-    const size_t solutionLength = ilpProblem.solve(os, true);
+    const size_t solutionLength = ilpProblem.solve(os, 1);
     os << "Solution length: " << solutionLength << std::endl;
+    os << "|||||||||||||||||||||||||||||||||||||||||||" << std::endl;
+    // Get the plan steps
+    const Chain<Step>* steps = plan.steps();
+    // Iterate through the steps
+    for (const Chain<Step>* sc = steps; sc != NULL; sc = sc->tail) {
+      const Action& action = sc->head.action();
+      // If the action name is <init 0> or <goal 0> then skip it
+      if (action.name() == "<init 0>" || action.name() == "") {
+        continue;
+      }
+      const IlpAction ilpAction = IlpAction(action);
+      ilpAction.print(os);
+      os << std::endl;
+    }
+    // Get the plan causal links
+    const Chain<Link>* links = plan.links();
+    // Iterate through the links
+    for (const Chain<Link>* lc = links; lc != NULL; lc = lc->tail) {
+      const Link& link = lc->head;
+      // Get the from and to actions
+      const size_t from_id = link.from_id();
+      const size_t to_id = link.to_id();
+      os << "Link: " << from_id << " -> " << to_id << std::endl;
 
-    // Call the example ILP from ilp.h
-    //os << "Calling example ILP: " << std::endl;
-    //example_ILP();
+      // Print the effect time
+      StepTime effect_time = link.effect_time();
+      std::string effect_time_str;
+      if (effect_time == StepTime::AT_START) {
+        effect_time_str = "AT START";
+      } else if (effect_time == StepTime::AT_END) {
+        effect_time_str = "AT END";
+      } else if (effect_time == StepTime::AFTER_START) {
+        effect_time_str = "AFTER START";
+      } else if (effect_time == StepTime::BEFORE_END) {
+        effect_time_str = "BEFORE END";
+      } else {
+        effect_time_str = "UNKNOWN";
+      }
+      os << "Effect time: " << effect_time_str << std::endl;
+      // Print the condition time (can be AT_START, OVER_ALL, AT_END)
+      FormulaTime condition_time = link.condition_time();
+      std::string condition_time_str;
+      if (condition_time == FormulaTime::AT_START) {
+        condition_time_str = "AT START";
+      } else if (condition_time == FormulaTime::OVER_ALL) {
+        condition_time_str = "OVER ALL";
+      } else if (condition_time == FormulaTime::AT_END) {
+        condition_time_str = "AT END";
+      } else {
+        condition_time_str = "UNKNOWN";
+      }
+      os << "Condition time: " << condition_time_str << std::endl;
+
+      // Print the condition predicate
+      os << "Condition: " << PredicateTable::name((*(&link.condition().atom())).predicate()) << std::endl;
+    }
+    //const Orderings& orderings = plan.orderings();
+    os << "__________________________________________" << std::endl;
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */

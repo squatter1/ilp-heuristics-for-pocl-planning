@@ -3,6 +3,8 @@
 #ifndef ILP_H
 #define ILP_H
 
+#include "actions.h"
+
 #include <iostream>
 #include <map>
 #include <set>
@@ -17,6 +19,9 @@ struct IlpAction {
   // Constructs an ILP action with the given name.
   IlpAction(const std::string& name);
 
+  // Constucts and ILP action from an action.
+  IlpAction(const Action& action);
+
   // Deletes this ILP action.
   ~IlpAction();
 
@@ -29,17 +34,23 @@ struct IlpAction {
   // Adds a positive effect to this ILP action.
   void add_pos_effect(const std::string effect);
 
+  // Adds a negative effect to this ILP action.
+  void add_neg_effect(const std::string effect);
+
   // List of ILP action conditions.
   const std::set<std::string>& conditions() const { return conditions_; }
 
-  // List of ILP action effects.
-  const std::set<std::string>& effects() const { return effects_; }
+  // List of ILP positive action effects.
+  const std::set<std::string>& pos_effects() const { return posEffects_; }
+
+  // List of ILP negative action effects.
+  const std::set<std::string>& neg_effects() const { return negEffects_; }
 
   // Returns the id for this ILP action.
   size_t id() const { return id_; }
 
   // Prints this ILP action on the given stream.
-  void print(std::ostream& os, std::string prefix) const;
+  void print(std::ostream& os, std::string prefix = "") const;
 
  private:
   // Next ILP action id.
@@ -51,8 +62,10 @@ struct IlpAction {
   std::string name_;
   // ILP action conditions.
   std::set<std::string> conditions_;
-  // List of ILP action effects.
-  std::set<std::string> effects_;  
+  // List of ILP positive action effects.
+  std::set<std::string> posEffects_; 
+  // List of ILP negative action effects.
+  std::set<std::string> negEffects_; 
 };
 
 /*
@@ -61,6 +74,9 @@ struct IlpAction {
 struct IlpProblem {
   /* Constructs an empty ILP problem with the given name. */
   IlpProblem(const std::string& name);
+
+  /* Constructs an ILP problem from a problem. */
+  IlpProblem(const Problem& problem);
 
   /* Deletes an ILP problem. */
   ~IlpProblem();
@@ -99,7 +115,7 @@ struct IlpProblem {
   const std::set<std::string>& goal() const { return goal_; }
 
   /* Finds the shortest solution length of this delete-relaxed problem with an ILP */
-  const size_t solve(std::ostream& os, bool verbose = false) const;
+  const size_t solve(std::ostream& os, short int verbosity = 0) const;
 
 private:
   /* Name of this ILP problem. */
