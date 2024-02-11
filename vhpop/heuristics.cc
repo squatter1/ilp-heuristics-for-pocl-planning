@@ -1037,62 +1037,10 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     const size_t solutionLength = ilpProblem.solve(os, 1);
     os << "Solution length: " << solutionLength << std::endl;
     os << "|||||||||||||||||||||||||||||||||||||||||||" << std::endl;
-    // Get the plan steps
-    const Chain<Step>* steps = plan.steps();
-    // Iterate through the steps
-    for (const Chain<Step>* sc = steps; sc != NULL; sc = sc->tail) {
-      const Action& action = sc->head.action();
-      // If the action name is <init 0> or <goal 0> then skip it
-      if (action.name() == "<init 0>" || action.name() == "") {
-        continue;
-      }
-      const IlpAction ilpAction = IlpAction(action);
-      ilpAction.print(os);
-      os << std::endl;
-    }
-    // Get the plan causal links
-    const Chain<Link>* links = plan.links();
-    // Iterate through the links
-    for (const Chain<Link>* lc = links; lc != NULL; lc = lc->tail) {
-      const Link& link = lc->head;
-      // Get the from and to actions
-      const size_t from_id = link.from_id();
-      const size_t to_id = link.to_id();
-      os << "Link: " << from_id << " -> " << to_id << std::endl;
-
-      // Print the effect time
-      StepTime effect_time = link.effect_time();
-      std::string effect_time_str;
-      if (effect_time == StepTime::AT_START) {
-        effect_time_str = "AT START";
-      } else if (effect_time == StepTime::AT_END) {
-        effect_time_str = "AT END";
-      } else if (effect_time == StepTime::AFTER_START) {
-        effect_time_str = "AFTER START";
-      } else if (effect_time == StepTime::BEFORE_END) {
-        effect_time_str = "BEFORE END";
-      } else {
-        effect_time_str = "UNKNOWN";
-      }
-      os << "Effect time: " << effect_time_str << std::endl;
-      // Print the condition time (can be AT_START, OVER_ALL, AT_END)
-      FormulaTime condition_time = link.condition_time();
-      std::string condition_time_str;
-      if (condition_time == FormulaTime::AT_START) {
-        condition_time_str = "AT START";
-      } else if (condition_time == FormulaTime::OVER_ALL) {
-        condition_time_str = "OVER ALL";
-      } else if (condition_time == FormulaTime::AT_END) {
-        condition_time_str = "AT END";
-      } else {
-        condition_time_str = "UNKNOWN";
-      }
-      os << "Condition time: " << condition_time_str << std::endl;
-
-      // Print the condition predicate
-      os << "Condition: " << PredicateTable::name((*(&link.condition().atom())).predicate()) << std::endl;
-    }
-    //const Orderings& orderings = plan.orderings();
+    // Print the ILP plan
+    os << "Printing ILP plan: " << std::endl;
+    const IlpPlan ilpPlan = IlpPlan(plan);
+    os << ilpPlan;
     os << "__________________________________________" << std::endl;
 
     switch (h) {

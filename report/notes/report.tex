@@ -68,6 +68,7 @@ Note how solving a classical plan with a solver is PSPACE-complete ~\cite{Berche
     \item An ILP model for delete free classical planning with constraints, superceded by ~\cite{pommerening2014lp} but still a useful paper as it is more directly connected, contains IP model enhancements. Note the terminology, eg. 'first achiever', relevant to some things eg bound proof~\cite{imai2015practical}
 \end{itemize}
 \section{Current Results}
+Converting causal links into classical plan: A1 -> A2 link on prop p: Create a new prop pl. Init contains pl, A1 deletes pl, A2 adds pl, all actions that delete p (even if delete relaxed) have pl as a precondition.\\
 \subsection{ILP Formulation}
 \subsubsection{Variables}
 \textbf{Proposition variables:} ss\\

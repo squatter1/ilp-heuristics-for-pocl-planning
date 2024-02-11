@@ -2,6 +2,7 @@
 #include "actions.h"
 #include "formulas.h"
 #include "problems.h"
+#include "plans.h"
 
 #include <iostream>
 #include <set>
@@ -73,7 +74,6 @@ void IlpAction::add_neg_effect(const std::string effect) {
 }
 
 void IlpAction::print(std::ostream& os, std::string prefix) const {
-  os << prefix << "ID: " << id_ << std::endl;
   os << prefix << "ILP Action Name: " << name_ << std::endl;
   // Print the conditions
   os << prefix << "Conditions:";
@@ -410,6 +410,129 @@ std::ostream& operator<<(std::ostream& os, const IlpProblem& p) {
        ai != p.actions_.end(); ai++) {
     os << (*ai).first << std::endl;
     (*ai).second->print(os, "  ");
+  }
+  return os;
+}
+
+IlpPlan::IlpPlan(const Plan& plan)
+    : id_(plan.serial_no()) {
+  // Add the plan steps
+  const Chain<Step>* steps = plan.steps();
+  for (const Chain<Step>* sc = steps; sc != NULL; sc = sc->tail) {
+    // If the action name is <init 0> or <goal 0> then skip it
+    const Action& action = sc->head.action();
+    if (action.name() == "<init 0>" || action.name() == "") {
+      continue;
+    }
+
+    add_step(sc->head.id(), new IlpAction(action));
+  }
+  // Add the plan causal links
+  const Chain<Link>* links = plan.links();
+  for (const Chain<Link>* lc = links; lc != NULL; lc = lc->tail) {
+    const Link& link = lc->head;
+    add_causal_link(link.from_id(), link.to_id(), PredicateTable::name((*(&link.condition().atom())).predicate()));
+  }
+  // Add the plan orderings
+  const BinaryOrderings& orderings = dynamic_cast<const BinaryOrderings&>(plan.orderings());
+  for (size_t i = 1; i <= orderings.size(); i++) {
+    for (size_t j = 1; j <= orderings.size(); j++) {
+      if (orderings.before(i, j)) {
+        add_ordering(i, j);
+      }
+    }
+  }
+}
+
+IlpPlan::~IlpPlan() { 
+  // Delete all created action pointers
+  for (std::map<size_t, const IlpAction*>::const_iterator ai =
+           steps_.begin();
+       ai != steps_.end(); ai++) {
+    delete (*ai).second;
+  }
+}
+
+void IlpPlan::add_step(const size_t id, const IlpAction* action) {
+  steps_[id] = action;
+}
+
+const IlpAction* IlpPlan::find_action(const size_t id) const {
+  std::map<size_t, const IlpAction*>::const_iterator ai =
+      steps_.find(id);
+  if (ai != steps_.end()) {
+    return (*ai).second;
+  } else {
+    return NULL;
+  }
+}
+
+void IlpPlan::add_causal_link(const size_t from, const size_t to, const std::string& condition) {
+  links_[from] = std::make_pair(to, condition);
+}
+
+void IlpPlan::add_ordering(const size_t before, const size_t after) {
+  orderings_[before] = after;
+}
+
+const size_t IlpPlan::solve(std::ostream& os, IlpProblem problem, short int verbosity) const { // TODO: Implement this function
+  return 0;
+}
+
+std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
+  os << "ILP Plan ID: " << p.serial_no() << std::endl;
+  // Print the steps
+  os << "Steps:" << std::endl;
+  for (std::map<size_t, const IlpAction*>::const_iterator ai =
+             p.steps_.begin();
+       ai != p.steps_.end(); ai++) {
+    os << "Step ID: " << (*ai).first << std::endl;
+    (*ai).second->print(os, "  ");
+  }
+  // Print the causal links
+  os << "Causal Links:" << std::endl;
+  for (std::map<size_t, std::pair<size_t, std::string>>::const_iterator ai =
+             p.links_.begin();
+       ai != p.links_.end(); ai++) {
+    os << "  " << (*ai).second.second << ": ";
+    if ((*ai).first == 0) {
+      os << "INIT -> ";
+    } else if ((*ai).first == Plan::GOAL_ID) {
+      os << "GOAL -> ";
+    } else {
+      const IlpAction* from = p.find_action((*ai).first);
+      os << "  " << from->name() << " -> ";
+    }
+    if ((*ai).second.first == 0) {
+      os << "INIT" << std::endl;
+    } else if ((*ai).second.first == Plan::GOAL_ID) {
+      os << "GOAL" << std::endl;
+    } else {
+      const IlpAction* to = p.find_action((*ai).second.first);
+      os << to->name() << std::endl;
+    }
+  }
+  // Print the orderings
+  os << "Orderings:" << std::endl;
+  for (std::map<size_t, size_t>::const_iterator ai =
+             p.orderings_.begin();
+       ai != p.orderings_.end(); ai++) {
+    if ((*ai).first == 0) {
+      os << "  INIT -> ";
+    } else if ((*ai).first == Plan::GOAL_ID) {
+      os << "  GOAL -> ";
+    } else {
+      const IlpAction* before = p.find_action((*ai).first);
+      os << "  " << before->name() << " -> ";
+    }
+    if ((*ai).second == 0) {
+      os << "INIT" << std::endl;
+    } else if ((*ai).second == Plan::GOAL_ID) {
+      os << "GOAL" << std::endl;
+    } else {
+      const IlpAction* after = p.find_action((*ai).second);
+      os << after->name() << std::endl;
+    }
   }
   return os;
 }

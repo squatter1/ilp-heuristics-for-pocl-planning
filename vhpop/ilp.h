@@ -4,6 +4,7 @@
 #define ILP_H
 
 #include "actions.h"
+#include "plans.h"
 
 #include <iostream>
 #include <map>
@@ -57,9 +58,9 @@ struct IlpAction {
   static size_t next_id;
 
   // Unique id for ILP actions.
-  size_t id_;
+  const size_t id_;
   // Name of this ILP action.
-  std::string name_;
+  const std::string name_;
   // ILP action conditions.
   std::set<std::string> conditions_;
   // List of ILP positive action effects.
@@ -119,7 +120,7 @@ struct IlpProblem {
 
 private:
   /* Name of this ILP problem. */
-  std::string name_;
+  const std::string name_;
   /* Problem actions. */
   std::map<std::string, const IlpAction*> actions_;
   /* Propositions. */
@@ -134,5 +135,55 @@ private:
 
 /* Output operator for ILP problems. */
 std::ostream& operator<<(std::ostream& os, const IlpProblem& d);
+
+/*
+ * ILP Plan definition. 
+ */
+struct IlpPlan {
+  /* Constructs an ILP plan from a plan. */
+  IlpPlan(const Plan& plan);
+
+  /* Deletes an ILP plan. */
+  ~IlpPlan();
+
+  /* Returns the serial number of this ILP plan. */
+  size_t serial_no() const { return id_; };
+
+  /* ILP plan steps. */
+  const std::map<size_t, const IlpAction*>& steps() const {
+    return steps_;
+  }
+
+  /* Adds a step to this plan. */
+  void add_step(const size_t id, const IlpAction* action);
+
+  /* Returns the ILP action with the given step id, or NULL if it is
+     undefined. */
+  const IlpAction* find_action(const size_t id) const;
+
+  /* Adds a causal link to this plan */
+  void add_causal_link(const size_t from, const size_t to, const std::string& condition);
+
+  /* Adds an ordering to this plan. */
+  void add_ordering(const size_t before, const size_t after);
+
+  /* Finds the shortest solution length of this plan with an ILP by adding delete relaxed problem actions */
+  const size_t solve(std::ostream& os, IlpProblem problem, short int verbosity = 0) const;
+
+private:
+  /* Plan id (serial number). */
+  mutable size_t id_;
+  /* Plan steps. */
+  std::map<size_t, const IlpAction*> steps_;
+  /* Plan causal links */
+  std::map<size_t, std::pair<size_t, std::string>> links_;
+  /* Plan orderings. */
+  std::map<size_t, size_t> orderings_;
+
+  friend std::ostream& operator<<(std::ostream& os, const IlpPlan& p);
+};
+
+/* Output operator for ILP plans. */
+std::ostream& operator<<(std::ostream& os, const IlpPlan& p);
 
 #endif  // ILP_H

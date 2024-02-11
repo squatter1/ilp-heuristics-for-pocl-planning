@@ -245,6 +245,12 @@ struct BinaryOrderings : public Orderings {
   virtual bool possibly_concurrent(size_t id1, size_t id2, bool& ss, bool& se,
                                    bool& es, bool& ee) const;
 
+  /* Returns true iff the first step is ordered before the second step. */
+  bool before(size_t id1, size_t id2) const;
+
+  /* Get number of orderings */
+  size_t size() const;
+
   /* Returns the ordering collection with the given addition. */
   virtual const BinaryOrderings* refine(const Ordering& new_ordering) const;
 
@@ -284,9 +290,6 @@ private:
                  std::map<size_t, float>& end_times, size_t step_id,
                  const std::map<std::pair<size_t,
                  StepTime::StepPoint>, float>& min_times) const;
-
-  /* Returns true iff the first step is ordered before the second step. */
-  bool before(size_t id1, size_t id2) const;
 
   /* Orders the first step before the second step. */
   void set_before(std::map<size_t, BoolVector*>& own_data,

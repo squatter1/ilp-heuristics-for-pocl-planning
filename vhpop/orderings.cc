@@ -296,6 +296,24 @@ bool BinaryOrderings::possibly_concurrent(size_t id1, size_t id2,
 }
 
 
+/* Returns true iff the first step is ordered before the second step. */
+bool BinaryOrderings::before(size_t id1, size_t id2) const {
+  if (id1 == id2) {
+    return false;
+  } else if (id1 < id2) {
+    return (*before_[id2 - 2])[id1 - 1];
+  } else {
+    return (*before_[id1 - 2])[2*id1 - 2 - id2];
+  }
+}
+
+
+/* Get number of orderings */
+size_t BinaryOrderings::size() const {
+  return before_.size() + 1;
+}
+
+
 /* Returns the the ordering collection with the given additions. */
 const BinaryOrderings*
 BinaryOrderings::refine(const Ordering& new_ordering) const {
@@ -440,18 +458,6 @@ BinaryOrderings::schedule(std::map<size_t, float>& start_times,
     start_times.insert(std::make_pair(step_id, sd));
     end_times.insert(std::make_pair(step_id, sd));
     return sd;
-  }
-}
-
-
-/* Returns true iff the first step is ordered before the second step. */
-bool BinaryOrderings::before(size_t id1, size_t id2) const {
-  if (id1 == id2) {
-    return false;
-  } else if (id1 < id2) {
-    return (*before_[id2 - 2])[id1 - 1];
-  } else {
-    return (*before_[id1 - 2])[2*id1 - 2 - id2];
   }
 }
 
