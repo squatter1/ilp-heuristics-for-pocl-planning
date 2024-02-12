@@ -149,19 +149,19 @@ IlpProblem::IlpProblem(const Problem& problem)
 
 IlpProblem::~IlpProblem() { 
   // Delete all created action pointers
-  for (std::map<std::string, const IlpAction*>::const_iterator ai =
+  for (std::map<std::string, IlpAction*>::const_iterator ai =
            actions_.begin();
        ai != actions_.end(); ai++) {
     delete (*ai).second;
   }
 }
 
-void IlpProblem::add_action(const IlpAction* action) {
+void IlpProblem::add_action(IlpAction* action) {
   actions_[action->name()] = action;
 }
 
-const IlpAction* IlpProblem::find_action(const std::string& name) const {
-  std::map<std::string, const IlpAction*>::const_iterator ai =
+IlpAction* IlpProblem::get_action(const std::string& name) const {
+  std::map<std::string, IlpAction*>::const_iterator ai =
       actions_.find(name);
   if (ai != actions_.end()) {
     return (*ai).second;
@@ -215,7 +215,7 @@ const size_t IlpProblem::solve(std::ostream& os, short int verbosity) const {
     }
 
     // For each action add a usage variable, a time variable, and add effect variables
-    for (std::map<std::string, const IlpAction*>::const_iterator ai =
+    for (std::map<std::string, IlpAction*>::const_iterator ai =
              actions_.begin();
          ai != actions_.end(); ai++) {
       IloNumVar actionVar(env, 0, 1, IloNumVar::Bool);
@@ -242,7 +242,7 @@ const size_t IlpProblem::solve(std::ostream& os, short int verbosity) const {
     }
 
     // Constraint set 2: Actions require their preconditions
-    for (std::map<std::string, const IlpAction*>::const_iterator ai =
+    for (std::map<std::string, IlpAction*>::const_iterator ai =
              actions_.begin();
          ai != actions_.end(); ai++) {
       for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
@@ -252,7 +252,7 @@ const size_t IlpProblem::solve(std::ostream& os, short int verbosity) const {
     }
 
     // Constraint set 3: An action can be the first achiever only if it is used
-    for (std::map<std::string, const IlpAction*>::const_iterator ai =
+    for (std::map<std::string, IlpAction*>::const_iterator ai =
              actions_.begin();
          ai != actions_.end(); ai++) {
       for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
@@ -266,7 +266,7 @@ const size_t IlpProblem::solve(std::ostream& os, short int verbosity) const {
          pi != props_.end(); pi++) {
       // Create an expression for the sum of add effects
       IloNumExprArray propAddEffects(env);
-      for (std::map<std::string, const IlpAction*>::const_iterator ai =
+      for (std::map<std::string, IlpAction*>::const_iterator ai =
                actions_.begin();
            ai != actions_.end(); ai++) {
         if ((*ai).second->pos_effects().count(*pi) > 0) {
@@ -277,7 +277,7 @@ const size_t IlpProblem::solve(std::ostream& os, short int verbosity) const {
     }
 
     // Constraint set 5: Actions must be preceded by the satisfaction of their preconditions
-    for (std::map<std::string, const IlpAction*>::const_iterator ai =
+    for (std::map<std::string, IlpAction*>::const_iterator ai =
              actions_.begin();
          ai != actions_.end(); ai++) {
       for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
@@ -287,7 +287,7 @@ const size_t IlpProblem::solve(std::ostream& os, short int verbosity) const {
     }
 
     // Constraint set 6: If a is the first achiever of p, then a must precede p
-    for (std::map<std::string, const IlpAction*>::const_iterator ai =
+    for (std::map<std::string, IlpAction*>::const_iterator ai =
              actions_.begin();
          ai != actions_.end(); ai++) {
       for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
@@ -405,7 +405,7 @@ std::ostream& operator<<(std::ostream& os, const IlpProblem& p) {
   os << std::endl;
   // Print the actions
   os << "Actions:" << std::endl;
-  for (std::map<std::string, const IlpAction*>::const_iterator ai =
+  for (std::map<std::string, IlpAction*>::const_iterator ai =
              p.actions_.begin();
        ai != p.actions_.end(); ai++) {
     os << (*ai).first << std::endl;
@@ -446,19 +446,19 @@ IlpPlan::IlpPlan(const Plan& plan)
 
 IlpPlan::~IlpPlan() { 
   // Delete all created action pointers
-  for (std::map<size_t, const IlpAction*>::const_iterator ai =
+  for (std::map<size_t, IlpAction*>::const_iterator ai =
            steps_.begin();
        ai != steps_.end(); ai++) {
     delete (*ai).second;
   }
 }
 
-void IlpPlan::add_step(const size_t id, const IlpAction* action) {
+void IlpPlan::add_step(const size_t id, IlpAction* action) {
   steps_[id] = action;
 }
 
-const IlpAction* IlpPlan::find_action(const size_t id) const {
-  std::map<size_t, const IlpAction*>::const_iterator ai =
+IlpAction* IlpPlan::get_action(const size_t id) const {
+  std::map<size_t, IlpAction*>::const_iterator ai =
       steps_.find(id);
   if (ai != steps_.end()) {
     return (*ai).second;
@@ -471,6 +471,10 @@ void IlpPlan::add_causal_link(const size_t from, const size_t to, const std::str
   links_[from] = std::make_pair(to, condition);
 }
 
+void IlpPlan::clear_causal_links() {
+  links_.clear();
+}
+
 void IlpPlan::add_ordering(const size_t before, const size_t after) {
   orderings_[before] = after;
 }
@@ -479,7 +483,7 @@ std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
   os << "ILP Plan ID: " << p.serial_no() << std::endl;
   // Print the steps
   os << "Steps:" << std::endl;
-  for (std::map<size_t, const IlpAction*>::const_iterator ai =
+  for (std::map<size_t, IlpAction*>::const_iterator ai =
              p.steps_.begin();
        ai != p.steps_.end(); ai++) {
     os << "Step ID: " << (*ai).first << std::endl;
@@ -496,7 +500,7 @@ std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
     } else if ((*ai).first == Plan::GOAL_ID) {
       os << "GOAL -> ";
     } else {
-      const IlpAction* from = p.find_action((*ai).first);
+      IlpAction* from = p.get_action((*ai).first);
       os << "  " << from->name() << " -> ";
     }
     if ((*ai).second.first == 0) {
@@ -504,7 +508,7 @@ std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
     } else if ((*ai).second.first == Plan::GOAL_ID) {
       os << "GOAL" << std::endl;
     } else {
-      const IlpAction* to = p.find_action((*ai).second.first);
+      IlpAction* to = p.get_action((*ai).second.first);
       os << to->name() << std::endl;
     }
   }
@@ -518,7 +522,7 @@ std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
     } else if ((*ai).first == Plan::GOAL_ID) {
       os << "  GOAL -> ";
     } else {
-      const IlpAction* before = p.find_action((*ai).first);
+      IlpAction* before = p.get_action((*ai).first);
       os << "  " << before->name() << " -> ";
     }
     if ((*ai).second == 0) {
@@ -526,7 +530,7 @@ std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
     } else if ((*ai).second == Plan::GOAL_ID) {
       os << "GOAL" << std::endl;
     } else {
-      const IlpAction* after = p.find_action((*ai).second);
+      IlpAction* after = p.get_action((*ai).second);
       os << after->name() << std::endl;
     }
   }
@@ -559,15 +563,43 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const { // TO
 
 void IlpNode::remove_causal_links() {
   // Iterate through the causal links
-  //for (std::map<size_t, std::pair<size_t, std::string>>::const_iterator ai =
-  //         plan_->links().begin();
-  //     ai != plan_->links().end(); ai++) {
-  //  // Get the from and to actions
-  //  //const IlpAction* from = plan_->find_action((*ai).first);
-  //  //const IlpAction* to = plan_->find_action((*ai).second.first);
-  //  // Add the condition to the to action
-  //  //to->add_condition((*ai).second.second);
-  //}
+  for (std::map<size_t, std::pair<size_t, std::string>>::const_iterator ai =
+           plan_->links().begin();
+       ai != plan_->links().end(); ai++) {
+    // Get the from and to actions
+    IlpAction* from = plan_->get_action((*ai).first);
+    IlpAction* to = plan_->get_action((*ai).second.first);
+    std::string condition = (*ai).second.second;
+    std::string link_prop = (*ai).second.second + "-link-" + std::to_string((*ai).first) + "-" + std::to_string((*ai).second.first);
+    problem_->add_prop(link_prop);
+    // If from is not init state, add link_prop to problem init state and delete at start of link
+    if (from) {
+      problem_->add_init_prop(link_prop);
+      from->add_neg_effect(link_prop);
+    }
+    // If to is not goal state, add link_prop at end of link
+    if (to) {
+      to->add_pos_effect(link_prop);
+    }
+    // For each action in problem, if the actions neg effects contains the condition, add link_prop to the preconditions
+    for (std::map<std::string, IlpAction*>::const_iterator ai =
+             problem_->actions().begin();
+         ai != problem_->actions().end(); ai++) {
+      if ((*ai).second->neg_effects().count(condition) > 0) {
+        (*ai).second->add_condition(link_prop);
+      }
+    }
+    // For each action in plan, if the actions neg effects contains the condition, add link_prop to the preconditions
+    for (std::map<size_t, IlpAction*>::const_iterator ai =
+             plan_->steps().begin();
+         ai != plan_->steps().end(); ai++) {
+      if ((*ai).second->neg_effects().count(condition) > 0) {
+        (*ai).second->add_condition(link_prop);
+      }
+    }
+  }
+  // Clear the causal links
+  plan_->clear_causal_links();
 }
 
 std::ostream& operator<<(std::ostream& os, const IlpNode& n) {

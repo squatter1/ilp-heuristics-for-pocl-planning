@@ -86,16 +86,16 @@ struct IlpProblem {
   const std::string& name() const { return name_; }
 
   /* ILP problem actions. */
-  const std::map<std::string, const IlpAction*>& actions() const {
+  const std::map<std::string, IlpAction*>& actions() const {
     return actions_;
   }
 
   /* Adds an ILP action to this problem. */
-  void add_action(const IlpAction* action);
+  void add_action(IlpAction* action);
 
   /* Returns the ILP action with the given name, or NULL if it is
      undefined. */
-  const IlpAction* find_action(const std::string& name) const;
+  IlpAction* get_action(const std::string& name) const;
 
   /* Adds a proposition to the proposition set of this problem. */
   void add_prop(std::string prop);
@@ -122,7 +122,7 @@ private:
   /* Name of this ILP problem. */
   const std::string name_;
   /* Problem actions. */
-  std::map<std::string, const IlpAction*> actions_;
+  std::map<std::string, IlpAction*> actions_;
   /* Propositions. */
   std::set<std::string> props_;
   /* Initial propositions. */
@@ -150,7 +150,7 @@ struct IlpPlan {
   size_t serial_no() const { return id_; };
 
   /* ILP plan steps. */
-  const std::map<size_t, const IlpAction*>& steps() const {
+  const std::map<size_t, IlpAction*>& steps() const {
     return steps_;
   }
 
@@ -165,14 +165,17 @@ struct IlpPlan {
   }
 
   /* Adds a step to this plan. */
-  void add_step(const size_t id, const IlpAction* action);
+  void add_step(const size_t id, IlpAction* action);
 
   /* Returns the ILP action with the given step id, or NULL if it is
      undefined. */
-  const IlpAction* find_action(const size_t id) const;
+  IlpAction* get_action(const size_t id) const;
 
   /* Adds a causal link to this plan */
   void add_causal_link(const size_t from, const size_t to, const std::string& condition);
+
+  /* Clear all causal links from this plan */
+  void clear_causal_links();
 
   /* Adds an ordering to this plan. */
   void add_ordering(const size_t before, const size_t after);
@@ -181,7 +184,7 @@ private:
   /* Plan id (serial number). */
   mutable size_t id_;
   /* Plan steps. */
-  std::map<size_t, const IlpAction*> steps_;
+  std::map<size_t, IlpAction*> steps_;
   /* Plan causal links */
   std::map<size_t, std::pair<size_t, std::string>> links_;
   /* Plan orderings. */
@@ -210,10 +213,10 @@ struct IlpNode {
     size_t serial_no() const { return id_; };
 
     /* Returns the ILP problem of this ILP node */
-    const IlpProblem* problem() const { return problem_; }
+    IlpProblem* problem() const { return problem_; }
 
     /* Returns the ILP plan of this ILP node */
-    const IlpPlan* plan() const { return plan_; }
+    IlpPlan* plan() const { return plan_; }
   
     /* Finds the shortest solution length of the problem from this node with an ILP by adding delete relaxed problem actions */
     const size_t solve(std::ostream& os, short int verbosity = 0) const;
@@ -222,9 +225,9 @@ struct IlpNode {
     /* Node id (serial number). */
     mutable size_t id_;
     /* Node problem */
-    const IlpProblem* problem_;
+    IlpProblem* problem_;
     /* Node plan */
-    const IlpPlan* plan_;
+    IlpPlan* plan_;
 
     /* Removes causal links by integrating them into the action definitions */
     void remove_causal_links();
