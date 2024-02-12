@@ -1042,6 +1042,10 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     const IlpPlan ilpPlan = IlpPlan(plan);
     os << ilpPlan;
     os << "__________________________________________" << std::endl;
+    // Print the ILP node
+    const IlpNode ilpNode = IlpNode(problem, plan);
+    os << ilpNode;
+    os << "==========================================" << std::endl;
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */

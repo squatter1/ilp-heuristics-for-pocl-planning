@@ -475,10 +475,6 @@ void IlpPlan::add_ordering(const size_t before, const size_t after) {
   orderings_[before] = after;
 }
 
-const size_t IlpPlan::solve(std::ostream& os, IlpProblem problem, short int verbosity) const { // TODO: Implement this function
-  return 0;
-}
-
 std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
   os << "ILP Plan ID: " << p.serial_no() << std::endl;
   // Print the steps
@@ -534,5 +530,49 @@ std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
       os << after->name() << std::endl;
     }
   }
+  return os;
+}
+
+IlpNode::IlpNode(const Problem& problem, const Plan& plan)
+    : id_(plan.serial_no()) {
+  problem_ = new IlpProblem(problem);
+  plan_ = new IlpPlan(plan);
+  remove_causal_links();
+}
+
+IlpNode::IlpNode(IlpProblem* problem, IlpPlan* plan)
+    : id_(plan->serial_no()) {
+  problem_ = problem;
+  plan_ = plan;
+  remove_causal_links();
+}
+
+IlpNode::~IlpNode() { 
+  // Delete the plan and problem
+  delete problem_;
+  delete plan_;
+}
+
+const size_t IlpNode::solve(std::ostream& os, short int verbosity) const { // TODO: Implement this function
+  return 0;
+}
+
+void IlpNode::remove_causal_links() {
+  // Iterate through the causal links
+  //for (std::map<size_t, std::pair<size_t, std::string>>::const_iterator ai =
+  //         plan_->links().begin();
+  //     ai != plan_->links().end(); ai++) {
+  //  // Get the from and to actions
+  //  //const IlpAction* from = plan_->find_action((*ai).first);
+  //  //const IlpAction* to = plan_->find_action((*ai).second.first);
+  //  // Add the condition to the to action
+  //  //to->add_condition((*ai).second.second);
+  //}
+}
+
+std::ostream& operator<<(std::ostream& os, const IlpNode& n) {
+  os << "Ilp Node ID: " << n.serial_no() << std::endl;
+  os << *n.problem();
+  os << *n.plan();
   return os;
 }

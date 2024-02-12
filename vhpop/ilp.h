@@ -154,6 +154,16 @@ struct IlpPlan {
     return steps_;
   }
 
+  /* ILP plan causal links. */
+  const std::map<size_t, std::pair<size_t, std::string>>& links() const {
+    return links_;
+  }
+
+  /* ILP plan orderings. */
+  const std::map<size_t, size_t>& orderings() const {
+    return orderings_;
+  }
+
   /* Adds a step to this plan. */
   void add_step(const size_t id, const IlpAction* action);
 
@@ -166,9 +176,6 @@ struct IlpPlan {
 
   /* Adds an ordering to this plan. */
   void add_ordering(const size_t before, const size_t after);
-
-  /* Finds the shortest solution length of this plan with an ILP by adding delete relaxed problem actions */
-  const size_t solve(std::ostream& os, IlpProblem problem, short int verbosity = 0) const;
 
 private:
   /* Plan id (serial number). */
@@ -185,5 +192,47 @@ private:
 
 /* Output operator for ILP plans. */
 std::ostream& operator<<(std::ostream& os, const IlpPlan& p);
+
+/*
+ * ILP Node definition. 
+ */
+struct IlpNode {
+    /* Constructs an ILP node from a problem and a plan. */
+    IlpNode(const Problem& problem, const Plan& plan);
+
+    /* Constructs an ILP node from an ILP problem and an ILP plan. */
+    IlpNode(IlpProblem* problem, IlpPlan* plan);
+  
+    /* Deletes an ILP Node. */
+    ~IlpNode();
+  
+    /* Returns the serial number of this ILP node. */
+    size_t serial_no() const { return id_; };
+
+    /* Returns the ILP problem of this ILP node */
+    const IlpProblem* problem() const { return problem_; }
+
+    /* Returns the ILP plan of this ILP node */
+    const IlpPlan* plan() const { return plan_; }
+  
+    /* Finds the shortest solution length of the problem from this node with an ILP by adding delete relaxed problem actions */
+    const size_t solve(std::ostream& os, short int verbosity = 0) const;
+
+  private:
+    /* Node id (serial number). */
+    mutable size_t id_;
+    /* Node problem */
+    const IlpProblem* problem_;
+    /* Node plan */
+    const IlpPlan* plan_;
+
+    /* Removes causal links by integrating them into the action definitions */
+    void remove_causal_links();
+
+  friend std::ostream& operator<<(std::ostream& os, const IlpNode& n);
+};
+
+/* Output operator for ILP nodes. */
+std::ostream& operator<<(std::ostream& os, const IlpNode& n);
 
 #endif  // ILP_H
