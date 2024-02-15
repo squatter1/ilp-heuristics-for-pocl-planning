@@ -20,8 +20,11 @@ struct IlpAction {
   // Constructs an ILP action with the given name.
   IlpAction(const std::string& name);
 
-  // Constucts and ILP action from an action.
-  IlpAction(const Action& action);
+  // Constucts an ILP action from an action.
+  IlpAction(const Action& action) : IlpAction(action, action.name()) {};
+
+  // Construct an ILP action from an action with a new name.
+  IlpAction(const Action& action, const std::string& name);
 
   // Deletes this ILP action.
   ~IlpAction();
