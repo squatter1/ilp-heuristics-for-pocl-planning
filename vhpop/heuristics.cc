@@ -1024,40 +1024,42 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
        hi != h_.end(); hi++) {
     HVal h = *hi;
     // Debugging code TODO remove
-    // Define the osstream
+    //// Define the osstream
+    //std::ostream& os = std::cout;
+    //os << "+++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+    //// Print the ILP problem
+    //os << "Printing ILP problem: " << std::endl;
+    //const IlpProblem ilpProblem = IlpProblem(problem);
+    //os << ilpProblem;
+    //os << "-------------------------------------------" << std::endl;
+    //// Solve the ILP problem
+    //os << "Solving ILP problem: " << std::endl;
+    //const size_t solutionLength = ilpProblem.solve(os, 1);
+    //os << "Solution length: " << solutionLength << std::endl;
+    //os << "|||||||||||||||||||||||||||||||||||||||||||" << std::endl;
+    //// Print the ILP plan
+    //os << "Printing ILP plan: " << std::endl;
+    //const IlpPlan ilpPlan = IlpPlan(plan);
+    //os << ilpPlan;
+    //os << "__________________________________________" << std::endl;
+    //// Print the ILP node
+    //const IlpNode ilpNode = IlpNode(problem, plan);
+    //os << ilpNode;
+    //os << "==========================================" << std::endl;
+    //// Solve the ILP node
+    //os << "Solving ILP node: " << std::endl;
+    //const size_t solutionLengthNode = ilpNode.solve(os, 2);
+    //os << "Solution length: " << solutionLengthNode << std::endl;
+    //os << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
+
     std::ostream& os = std::cout;
-    os << "+++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-    // Print the ILP problem
-    os << "Printing ILP problem: " << std::endl;
-    const IlpProblem ilpProblem = IlpProblem(problem);
-    os << ilpProblem;
-    os << "-------------------------------------------" << std::endl;
-    // Solve the ILP problem
-    os << "Solving ILP problem: " << std::endl;
-    const size_t solutionLength = ilpProblem.solve(os, 1);
-    os << "Solution length: " << solutionLength << std::endl;
-    os << "|||||||||||||||||||||||||||||||||||||||||||" << std::endl;
-    // Print the ILP plan
-    os << "Printing ILP plan: " << std::endl;
-    const IlpPlan ilpPlan = IlpPlan(plan);
-    os << ilpPlan;
-    os << "__________________________________________" << std::endl;
-    // Print the ILP node
     const IlpNode ilpNode = IlpNode(problem, plan);
-    os << ilpNode;
-    os << "==========================================" << std::endl;
-    // Solve the ILP node
-    os << "Solving ILP node: " << std::endl;
     const size_t solutionLengthNode = ilpNode.solve(os, 2);
-    os << "Solution length: " << solutionLengthNode << std::endl;
-    os << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
-      // We start with an empty rank vector, we need to use rank.push_back to give a rank to this specific plan
-      // Plan struct defined at plans.h line 128
-      // Temp heuristic of open conditions
-      rank.push_back(plan.num_open_conds());
+      rank.push_back(solutionLengthNode);
+      os << "Solution length: " << solutionLengthNode << std::endl;
       break;
     case LIFO:
       rank.push_back(-1.0*plan.serial_no());
