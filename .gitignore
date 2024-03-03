@@ -10,7 +10,6 @@ report/**/*.out
 report/**/*.pdf
 report/**/*.toc
 
-
 # Root project
 .vscode/
 build/
