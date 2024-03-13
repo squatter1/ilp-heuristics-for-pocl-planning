@@ -38,6 +38,8 @@ IlpAction::IlpAction(const Action& action, const std::string& name)
       }
     }
   } else {
+    action.print(std::cout, 0, Bindings::EMPTY);
+    condition_formula.print(std::cout, 0, Bindings::EMPTY);
     std::cout << "Not a conjunction ERROR" << std::endl;
     return; // Not a conjunction
   }
