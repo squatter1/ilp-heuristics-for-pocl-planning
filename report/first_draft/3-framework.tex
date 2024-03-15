@@ -1,12 +1,29 @@
 \chapter{Formal Framework}\label{chap:framework}
 
+Chapter Intro
+
+
+\section{Planning}
+
+
+\textit{Planning} describes a class of problems and associated solvers which search the space of \textit{world models} to get from a given starting world model to a world model fitting given goal criteria. For any world model a set of applicable actions exists, each of which is a transformation to a new world model. By exploring the search space through actions, a \textit{planner} can find sequences of actions which lead to the goal. We specifically consider \textit{Propositional STRIPS} planning. \textit{Propositional} means that each variable is a proposition, signifying it can only be true or false, and all formulas are \textit{grounded}, denoting that they comprise solely of propositions and logical connectives. \textit{STRIPS} is a planning notation defined by~\cite{STRIPS: A NEW APPROACH TO THE APPLICATION OF THEOREM PROVING TO PROBLEM SOLVING}. There are multiple sub-classes of planning, which can have different definitions of world models and different methods of exploring their search space. One of these sub-classes is \textit{classical planning}, where a world model is represented by the set of propositions and their values, called a \textit{state}, along with a sequence of actions which led from the initial state to the current state. Another sub-class is \textit{Partial Order Causal Link} (POCL) planning, where each world model is it's own \textit{partial plan}. These partial plans contain action instances called \textit{plan steps}, orderings between those steps, and causal links representing causal relationships between effects and preconditions of different steps.\\
+
+
+The problem of \textit{PLANSAT}, determining whether a planning problem instance is solvable, and \textit{PLANMIN}, determining whether there is a solution using at most $n$ actions, are both PSPACE-complete in Propositional STRIPS planning without severe restrictions, as found by~\cite{The Computational Complexity of Propositional STRIPS Planning}. To solve problems in this intractable space, \textit{heuristics} are used to generate estimates of solution length when using the current world model. As these heuristics usually need to be calculated for an exponentially growing set of search nodes, efficiency is critical, and so almost all planning heuristics run in polytime. In addition to efficiency, there are other metrics that are important to consider for heuristic effectiveness. \textit{Admissible} heuristics never overestimate the number of actions required to meet the goal, guaranteeing optimality of the first found solution when expanding nodes in order of current actions used + heuristic estimate. An admissible heuristic $H_1$ \textit{dominates} another admissible heuristic $H_2$ if for any search node $x$, $H_1(x)>H_2(x)$, since this means that it creates more accurate estimates, dominant heuristics are considered more powerful.\\
+
+
+In this paper, we are particularly looking into the use of heuristics for determining PLANSAT in POCL planning. While technically this problem is PSPACE-complete, as with almost all PLANSAT problems,~\cite{The complexity of searching implicit graphs} explains how `the standard complexity classes of complexity theory do not allow for direct classification of most of the problems solved by heuristic search algorithms' due to the lack of consideration for implicit inputs within the node expansion procedure, for example node size as a heuristic input. In POCL planning, node sizes are significantly larger than node sizes in classical planning, as they contain orderings and causal links, and this increases the complexity of heuristics.~\cite{A Closer Look at Causal Links: Complexity Results for Delete-Relaxation in Partial Order Causal Link (POCL) Planning} shows that a standard delete-relaxation heuristic in classical planning, which is in P, becomes NP-complete when translated to POCL planning. This added complexity means that most POCL heuristics throw away information from the current search node to allow for a polytime heuristic, but this leads to an inefficient search process as current search progress is ignored when calculating future search direction. We create an NP-complete heuristic which maintains all node information, and hence creates a more direct translation of classical planning heuristics. The benefit of large node sizes in POCL planning is that a single POCL node represents up to a factorial number of action sequences, whereas a classical planning node only represents one. This means that calculating infeasibilty of a node in POCL planning is hypothetically much more feasible in POCL over classical, as in the worst case a factorial number of cuts taking P time are required, whereas in POCL a single NP-complete time cut is required.
+
+
+\section{Formal Framework for Planning}
+
 We consider the problem of optimizing the makespan of partially ordered plans. We first define a classical planning problem and plan in STRIPS notation, and then extend it to POCL problems and plans. We follow the notation used by~\cite{Bercher2020POPvsPOCL}.\\
 
 
-A classical planning problem $\mathcal{P}$ is given by a tuple $(V,A,s_I,g)$, where $V$ is a finite set of propositional state variables, $A$ is a finite set of \textit{actions}, $s_I\in 2^V$ is the initial state, and $g\subseteq V$ is the goal description. An \textit{action} $a\in A$ is a tuple $(pre, add, del)$, referred to as $pre(a)$, $add(a)$, and $del(a)$, where $pre, add, del \subseteq V$. These sets represent an action's \textit{precondition}, \textit{add}, and \textit{delete} lists. As is standard, an action $a\in A$ is executable in a state $s\in 2^V$ if and only if $pre(a)\subseteq s$. If $a$ is executable in $s$, the state transition function $\gamma : A \times 2^F \rightarrow 2^F$ returns its successor state after executing $a$: $\gamma (a,s)=(s\setminus del(a))\cup add(a)$. A sequence of actions $\overline{a}=(a_0,a_1,\ldots,a_n)$ is executable in a state $s_0$ if there exists a state sequence $(s_1,s_2,\ldots ,s_{n+1})$ such that $\gamma (a_{i-1},s{i-1})=s_i$ holds for all $1\leq i \leq n+1$. The state $s_{n+1}$ is called the \textit{result} of executing the sequence. If a state $s\in 2^V$ follows $g\subseteq s$ then it is called a \textit{goal state}.\\
+A classical planning problem $\mathcal{P}$ is given by a tuple $(V,A,s_I,g)$, where $V$ is a finite set of propositional state variables, $A$ is a finite set of \textit{actions}, $s_I\in 2^V$ is the initial state, and $g\subseteq V$ is the goal description. An \textit{action} $a\in A$ is a tuple $(pre, add, del)$, referred to as $pre(a)$, $add(a)$, and $del(a)$, where $pre, add, del \subseteq V$. These sets represent an action's \textit{precondition}, \textit{add}, and \textit{delete} lists. As is standard, an action $a\in A$ is executable in a state $s\in 2^V$ if and only if $pre(a)\subseteq s$. If $a$ is executable in $s$, the state transition function $\gamma : A \times 2^F \rightarrow 2^F$ returns its successor state after executing $a$: $\gamma (a,s)=(s\setminus del(a))\cup add(a)$. A sequence of actions $\overline{a}=(a_0,a_1,\ldots,a_n)$ is executable in a state $s_0$ if there exists a state sequence $(s_1,s_2,\ldots ,s_{n+1})$ such that $\gamma (a_{i-1},s{i-1})=s_i$ holds for all $1\leq i \leq n+1$. The state $s_{n+1}$ is called the \textit{result} of executing the sequence. If a state $s\in 2^V$ is such that $g\subseteq s$ then it is called a \textit{goal state}.\\
 
 
-Classical solutions to planning problems are total-order plans, as defined below.\newline
+Classical solutions to planning problems are total-order plans, as defined below.\\
 
 \textbf{Definition 1.} An action sequence $\overline{a}$ is called a \textit{total-order plan} $\overline{P}$ (also \textit{total-order solution}) for a planning problem if and only if it is executable in $s_I$ and results in a goal state.\\
 
@@ -20,9 +37,13 @@ A partial plan $P$ is given by a tuple $(PS,\prec , CL)$, where $PS$ is a finite
 In POCL planning, the problem's initial state and goal description are encoded using two artificial actions, labelled \textit{init} and \textit{goal}, where $add(init)=\{v\in s_I: v \text{ is true}\}$, and $pre(goal)=g$. The sets $pre(init),del(init),add(goal),$ and $del(goal)$ are all empty. In all partial plans, \textit{init} is ordered before all other steps and \textit{goal} is ordered after them. \\
 
 
-We can now define POCL solutions to planning problems.\newline
+We can now define POCL solutions to planning problems.\\
 
 \textbf{Definition 2.} A partial POCL plan $P$ is called a \textit{POCL plan} (also \textit{POCL solution}) for a planning problem if and only if every precondition is supported by a causal link and there are no causal threats.\\
 
 
 It is common knowledge that this criteria for a POCL plan is sufficient to imply that every linearization of its steps is executable, and hence a POCL plan can represent up to an exponential set of total-order solutions. Note that the inverse is not true, i.e every linearization being executable is \textit{not} a sufficient condition for a partial POCL plan to be a POCL plan, as proved by~\cite{Bercher2020POPvsPOCL}.
+
+\section{Integer Linear Programs}
+
+\section{Formal Framework for ILPs}
