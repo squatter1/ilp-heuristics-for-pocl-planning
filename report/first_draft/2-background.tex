@@ -23,9 +23,16 @@ Here we provide the formal framework for planning which will be used for the rem
 A classical planning problem $\mathcal{P}$ is given by a tuple $(V,A,s_I,g)$, where $V$ is a finite set of propositional state variables, $A$ is a finite set of \textit{actions}, $s_I\in 2^V$ is the initial state, and $g\subseteq V$ is the goal description. An \textit{action} $a\in A$ is a tuple $(\Pre, \Add, \Del)$; referred to as $\Pre(a)$, $\Add(a)$, and $\Del(a)$; where $\Pre, \Add, \Del \subseteq V$. These sets represent an action's \textit{precondition}, \textit{add}, and \textit{delete} lists. The precondition list holds the propositions required to execute an action, and so $a\in A$ is executable in a state $s\in 2^V$ if and only if $\Pre(a)\subseteq s$. The add list holds the propositions that will be set to true after an action is executed, and the delete lists similarly holds the propositions which will be set to false. From this, if $a$ is executable in $s$, we can define a state transition function $\gamma : A \times 2^F \rightarrow 2^F$ to return the successor state after executing $a$ in $s$: $\gamma (a,s)=(s\setminus \Del(a))\cup \Add(a)$. A sequence of actions $\overline{a}=(a_0,a_1,\ldots,a_n)$ is executable in a state $s_0$ if there exists a state sequence $\overline{s}=(s_1,s_2,\ldots ,s_{n+1})$ such that each successive action in $\overline{a}$ transitions to the next state in $\overline{s}$, or formally that $\gamma (a_{i-1},s{i-1})=s_i$ holds for all $1\leq i \leq n+1$. The state $s_{n+1}$ is called the \textit{result} of executing the sequence. If a state $s\in 2^V$ is such that $g\subseteq s$ then it is called a \textit{goal state}.\\
 
 
-Classical solutions to planning problems are called \textit{total-order} plans, since they are defined with action sequences which follow a sequential order, as defined below. Figure 1 shows an example of a total-order plan.\\
+Classical solutions to planning problems are called \textit{total-order} plans, since they are defined with action sequences which follow a sequential order, as defined below. Figure ~\ref{fig:totalOrder} shows an example of a total-order plan.\\
 
 \textbf{Definition 1.} An action sequence $\overline{a}$ is called a \textit{total-order plan} $\overline{P}$ (also \textit{total-order solution}) for a classical planning problem if and only if it is executable in $s_I$ and results in a goal state.\\
+
+
+\begin{figure}[th!]
+    \includegraphics[width=12cm]{figures/total_order.jpg}
+    \caption{An example of a total-order plan.\label{fig:totalOrder}}
+\end{figure}
+
 
 
 The \textit{delete relaxation} of a planning problem $\mathcal{P}$ for an action sequence $\overline{a_i}$ is the problem $\mathcal{P}^+(\overline{a_i})$, which is $\mathcal{P}$ but with $\Del(a)=\emptyset$ for all $a\in A$, and $s_I$ set to the result of executing $\overline{a_i}$ on $s_I$. The action sequence $\overline{a_i}$ represents the initial work already done in the non-relaxed problem before applying the delete relaxation, as would be the case for applying a delete relaxation heuristic to a search node in a planner. By ignoring all delete effects in future actions, any action that becomes executable will forever remain executable.\\
@@ -41,9 +48,15 @@ A partial plan $P$ is given by a tuple $(PS,\prec , CL)$, where $PS$ is a finite
 In POCL planning, the problem's initial state and goal description are encoded using two artificial actions, labelled \textit{init} and \textit{goal}, where $\Add(init)=\{v\in s_I: v \text{ is true}\}$, and $\Pre(goal)=g$. The sets $\Pre(init),\Del(init),\Add(goal),$ and $\Del(goal)$ are all empty. In all partial plans, \textit{init} is ordered before all other steps and \textit{goal} is ordered after them. This allows all reasoning to be done with actions, removing all state-based logic from POCL planning.\\
 
 
-We can now define POCL solutions to planning problems. Figure 2 shows an example of a POCL plan, for which the total-order plan from Figure 1 is a linearization.\\
+We can now define POCL solutions to planning problems. Figure ~\ref{fig:partialOrder} shows an example of a POCL plan, for which the total-order plan from Figure ~\ref{fig:totalOrder} is a linearization.\\
 
 \textbf{Definition 3.} A partial POCL plan $P$ is called a \textit{POCL plan} (also \textit{POCL solution}) for a classical planning problem if and only if every precondition is supported by a causal link and there are no causal threats.\\
+
+
+\begin{figure}[th!]
+    \includegraphics[width=12cm]{figures/partial_order.jpg}
+    \caption{An example of a partial-order plan.\label{fig:partialOrder}}
+\end{figure}
 
 
 It is common knowledge that this criteria for a POCL plan is sufficient to imply that every linearization of its steps is executable, and hence a POCL plan can represent up to a factorial set of total-order solutions. However, note that the inverse is not true. There exists partial-order plans where every linearization is executable, yet there is no way to insert causal links to support every precondition without creating a causal threat, and hence there is no corresponding POCL plan. This property is explored by~\cite{Bercher2020POPvsPOCL}, including a counterexample to the inverse case in Figure 1. The paper also presents a polytime method for converting any partial-order plan where every linearization is executable into a POCL plan with the same makespan.\\
