@@ -258,3 +258,58 @@
   year={1982},
   publisher={Elsevier}
 }
+
+@InProceedings{Hoeller2020ILP,
+  author    = {Daniel H\"oller and Pascal Bercher and Gregor Behnke},
+  title     = {Delete- and Ordering-Relaxation Heuristics for HTN Planning},
+  booktitle = {Proceedings of the 29th International Joint Conference on Artificial Intelligence (IJCAI 2020)},
+  year      = {2020},
+  publisher = {IJCAI},
+  doi       = {10.24963/ijcai.2020/564},
+  pages     = {4076--4083},
+  abstract  = {In HTN planning, the hierarchy has a wide impact on solutions. First, there is (usually) no state-based goal given, the objective is given via the hierarchy. Second, it enforces actions to be in a plan. Third, planners are not allowed to add actions apart from the hierarchy. However, no heuristic considers the interplay of hierarchy and actions in the plan exactly (without relaxation) because this makes heuristic calculation NP-hard even under delete relaxation. We introduce the problem class of delete- and ordering-free  HTN planning as basis for novel HTN heuristics and show that its plan existence problem is still NP-complete. We then introduce heuristics based on the new class using an integer linear programming model to solve it.},
+  url_Paper = {https://bercher.net/publications/2020/Hoeller2020ILPHTNHeuristics.pdf}
+}
+
+@InProceedings{Bercher2013POCLHeuristicsViaEncoding,
+  author     = {Pascal Bercher and Thomas Geier and Susanne Biundo},
+  title      = {Using State-Based Planning Heuristics for Partial-Order Causal-Link Planning},
+  booktitle  = {Advances in Artificial Intelligence, Proceedings of the 36th German Conference on Artificial Intelligence ({KI} 2013)},
+  year       = {2013},
+  pages      = {1--12},
+  publisher  = {Springer},
+  doi        = {10.1007/978-3-642-40942-4_1},
+  abstract   = {We present a technique which allows partial-order causal-link (POCL) planning systems to use heuristics known from state-based planning to guide their search. The technique encodes a given partially ordered partial plan as a new classical planning problem that yields the same set of solutions reachable from the given partial plan. As heuristic estimate of the given partial plan a state-based heuristic can be used estimating the goal distance of the initial state in the encoded problem. This technique also provides the first admissible heuristics for POCL planning, simply by using admissible heuristics from state-based planning. To show the potential of our technique, we conducted experiments where we compared two of the currently strongest heuristics from state-based planning with two of the currently best-informed heuristics from POCL planning.},
+  url_Paper  = {https://bercher.net/publications/2013/Bercher2013POCLHeuristicsViaEncoding.pdf},
+  url_Slides = {https://bercher.net/publications/2013/Bercher2013POCLHeuristicsViaEncodingSlides.pdf}
+}
+
+@InProceedings{Pommerening2014LPHeuristics,
+  author={Pommerening, Florian and R{\"o}ger, Gabriele and Helmert, Malte and Bonet, Blai},
+  title={{LP}-Based Heuristics for Cost-Optimal Planning},
+  booktitle={Proceedings of the 24th International Conference on Automated Planning and Scheduling (ICAPS 2014)},
+  volume={24},
+  pages={226--234},
+  year={2014},
+  publisher={AAAI Press},
+  doi={10.1609/icaps.v24i1.13621}
+}
+
+@InProceedings{Bonet2013AdmissibleLPHeuristic,
+  author={Bonet, Blai},
+  title={An Admissible Heuristic for {SAS+} Planning Obtained from the State Equation},
+  booktitle={Proceedings of the 23rd International Joint Conference on Artificial Intelligence (IJCAI 2013)},
+  year={2013},
+  pages={2268--2274},
+  publisher={AAAI Press},
+  doi={10.24963/ijcai.2013/1}
+}
+
+@InProceedings{Pommerening2013PatternDatabaseLPHeuristics,
+  author={Pommerening, Florian and R{\"o}ger, Gabriele and Helmert, Malte},
+  title={Getting the Most Out of Pattern Databases for Classical Planning},
+  booktitle={Proceedings of the 23rd International Joint Conference on Artificial Intelligence (IJCAI 2013)},
+  year={2013},
+  pages={2357--2364},
+  publisher={AAAI Press}
+}
