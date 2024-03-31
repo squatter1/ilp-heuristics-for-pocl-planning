@@ -25,6 +25,8 @@
 #include <set>
 #include <typeinfo>
 #include <utility>
+#include <thread>// TODO remove
+#include <chrono>// TODO remove
 
 #include "bindings.h"
 #include "chain.h"
@@ -1054,12 +1056,15 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
 
     std::ostream& os = std::cout;
     const IlpNode ilpNode = IlpNode(problem, plan);
-    const size_t solutionLengthNode = ilpNode.solve(os, 2);
+    os << ilpNode;
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
-      rank.push_back(solutionLengthNode);
-      os << "Solution length: " << solutionLengthNode << std::endl;
+      //rank.push_back(solutionLengthNode);
+      os << "Solution length: " << ilpNode.solve(os, 2) << std::endl;
+      rank.push_back(-1.0*plan.serial_no());
+      // wait for 10 seconds
+      std::this_thread::sleep_for(std::chrono::seconds(10));
       break;
     case LIFO:
       rank.push_back(-1.0*plan.serial_no());
