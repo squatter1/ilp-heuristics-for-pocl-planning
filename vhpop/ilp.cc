@@ -852,7 +852,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       }
     }
 
-    // Constraint set 6: If a is the first achiever of p, then a must precede p
+    // Constraint set 6: If a is the first achiever of p, then a must precede p by 1 time unit
     for (std::map<std::string, IlpAction*>::const_iterator ai =
              problem_->actions().begin();
          ai != problem_->actions().end(); ai++) {
@@ -860,11 +860,11 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
            ei != (*ai).second->pos_effects().end(); ei++) {
         for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
           IloOr firstAchiever(env);
+          firstAchiever.add(addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i] == 0);
           for (int j = 0; j < propVars[prop[("PA-" + (*ei)).c_str()]].getSize(); j++) {
             firstAchiever.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] + 1 <=
-                  propTimeVars[propTime[("PT-" + (*ei)).c_str()]][j] 
-                  + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i])
-                  - 2 * M * (1 - propVars[prop[("PA-" + (*ei)).c_str()]][j]));
+                  propTimeVars[propTime[("PT-" + (*ei)).c_str()]][j]
+                  - M * (1 - propVars[prop[("PA-" + (*ei)).c_str()]][j]));
           }
           model.add(firstAchiever);
           firstAchiever.setName(("C6-A_" + (*ai).first + "-E_" + (*ei)).c_str());
@@ -877,98 +877,107 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
            ei != (*ai).second->pos_effects().end(); ei++) {
         IloOr firstAchiever(env);
-        // TODO only allow an proposition instance if it is used with an M expression
+        firstAchiever.add(addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0] == 0);
         for (int j = 0; j < propVars[prop[("PA-" + (*ei)).c_str()]].getSize(); j++) {
           firstAchiever.add(stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] + 1 <=
-                propTimeVars[propTime[("PT-" + (*ei)).c_str()]][j] 
-                + M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0])
-                - 2 * M * (1 - propVars[prop[("PA-" + (*ei)).c_str()]][j]));
+                propTimeVars[propTime[("PT-" + (*ei)).c_str()]][j]
+                - M * (1 - propVars[prop[("PA-" + (*ei)).c_str()]][j]));
         }
         model.add(firstAchiever);
         firstAchiever.setName(("C6-S_" + (*ai).second->name() + "-E_" + (*ei)).c_str());
       }
     }
 
+    // If there are two steps, then the time of the action drive-to-a must be the same as the time of the step drive-to-a-1
+    //if (plan_->steps().size() == 2) {
+    //  IloConstraint c71 = stepTimeVars[stepTime["ST-drive-to-a-1"]] == actionTimeVars[actionTime["AT-drive-to-a"]][0];
+    //  model.add(c71);
+    //  c71.setName("C71");
+    //  IloConstraint c72 = stepTimeVars[stepTime["ST-drive-to-a-1"]] == actionTimeVars[actionTime["AT-drive-to-a"]][1];
+    //  model.add(c72);
+    //  c72.setName("C72");
+    //}
+
     // TODO need some kind of way to prevent add effects stacking
     // EG currently we can have both a1 and a2 add p1, giving two instances: p1_1 and p1_2, but the time restrictions are both applied to p1_1 and so p1_2 can be at time 0
     // c7 is not working as expected, maybe tie prop instances to specific add effects (or init if added by init) (is number prop instances always >= number of prop add effects?)
 
     // Constraint set 7: If two actions/steps are first achievers of the same proposition, then they must be at different times
-    //// For an action with an action
-    //for (std::map<std::string, IlpAction*>::const_iterator ai =
-    //         problem_->actions().begin();
-    //     ai != problem_->actions().end(); ai++) {
-    //  for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
-    //       ei != (*ai).second->pos_effects().end(); ei++) {
-    //    for (std::map<std::string, IlpAction*>::const_iterator aj =
-    //             problem_->actions().begin();
-    //         aj != problem_->actions().end(); aj++) {
-    //      if (ai == aj) {
-    //        continue;
-    //      }
-    //      for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
-    //           ej != (*aj).second->pos_effects().end(); ej++) {
-    //        for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
-    //          for (int j = 0; j < actionVars[action[("AU-" + (*aj).first).c_str()]].getSize(); j++) {
-    //            IloConstraint c7 = actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
-    //                              != actionTimeVars[actionTime[("AT-" + (*aj).first).c_str()]][j] 
-    //                              + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i])
-    //                              + M * (1 - addEffectVars[addEffect[("AE-" + (*aj).first + "->" + (*ej)).c_str()]][j]);
-    //            model.add(c7);
-    //            c7.setName(("C7-A_" + (*ai).first + "-E_" + (*ei) + "-A_" + (*aj).first + "-E_" + (*ej)).c_str());
-    //          }
-    //        }
-    //      }
-    //    }
-    //  }
-    //}
-    //// For an action with a step
-    //for (std::map<std::string, IlpAction*>::const_iterator ai =
-    //         problem_->actions().begin();
-    //     ai != problem_->actions().end(); ai++) {
-    //  for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
-    //       ei != (*ai).second->pos_effects().end(); ei++) {
-    //    for (std::map<size_t, IlpAction*>::const_iterator aj =
-    //             plan_->steps().begin();
-    //         aj != plan_->steps().end(); aj++) {
-    //      for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
-    //           ej != (*aj).second->pos_effects().end(); ej++) {
-    //        for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
-    //          IloConstraint c7 = actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
-    //                            != stepTimeVars[stepTime[("ST-" + (*aj).second->name()).c_str()]] 
-    //                            + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i])
-    //                            + M * (1 - addEffectVars[addEffect[("SE-" + (*aj).second->name() + "->" + (*ej)).c_str()]][0]);
-    //          model.add(c7);
-    //          c7.setName(("C7-A_" + (*ai).first + "-E_" + (*ei) + "-S_" + (*aj).second->name() + "-E_" + (*ej)).c_str());
-    //        }
-    //      }
-    //    }
-    //  }
-    //}
-    //// For a step with a step
-    //for (std::map<size_t, IlpAction*>::const_iterator ai =
-    //         plan_->steps().begin();
-    //     ai != plan_->steps().end(); ai++) {
-    //  for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
-    //       ei != (*ai).second->pos_effects().end(); ei++) {
-    //    for (std::map<size_t, IlpAction*>::const_iterator aj =
-    //             plan_->steps().begin();
-    //         aj != plan_->steps().end(); aj++) {
-    //      if (ai == aj) {
-    //        continue;
-    //      }
-    //      for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
-    //           ej != (*aj).second->pos_effects().end(); ej++) {
-    //        IloConstraint c7 = stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] 
-    //                          != stepTimeVars[stepTime[("ST-" + (*aj).second->name()).c_str()]] 
-    //                          + M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0])
-    //                          + M * (1 - addEffectVars[addEffect[("SE-" + (*aj).second->name() + "->" + (*ej)).c_str()]][0]);
-    //        model.add(c7);
-    //        c7.setName(("C7-S_" + (*ai).second->name() + "-E_" + (*ei) + "-S_" + (*aj).second->name() + "-E_" + (*ej)).c_str());
-    //      }
-    //    }
-    //  }
-    //}
+    // For an action with an action
+    for (std::map<std::string, IlpAction*>::const_iterator ai =
+             problem_->actions().begin();
+         ai != problem_->actions().end(); ai++) {
+      for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
+           ei != (*ai).second->pos_effects().end(); ei++) {
+        for (std::map<std::string, IlpAction*>::const_iterator aj =
+                 problem_->actions().begin();
+             aj != problem_->actions().end(); aj++) {
+          for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
+               ej != (*aj).second->pos_effects().end(); ej++) {
+            for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
+              for (int j = 0; j < actionVars[action[("AU-" + (*aj).first).c_str()]].getSize(); j++) {
+                if (ai == aj && i == j) {
+                  continue;
+                }
+                IloConstraint c7 = actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
+                                  != actionTimeVars[actionTime[("AT-" + (*aj).first).c_str()]][j] 
+                                  + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i])
+                                  + M * (1 - addEffectVars[addEffect[("AE-" + (*aj).first + "->" + (*ej)).c_str()]][j]);
+                model.add(c7);
+                c7.setName(("C7-A_" + (*ai).first + "-E_" + (*ei) + "-A_" + (*aj).first + "-E_" + (*ej)).c_str());
+              }
+            }
+          }
+        }
+      }
+    }
+    // For an action with a step
+    for (std::map<std::string, IlpAction*>::const_iterator ai =
+             problem_->actions().begin();
+         ai != problem_->actions().end(); ai++) {
+      for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
+           ei != (*ai).second->pos_effects().end(); ei++) {
+        for (std::map<size_t, IlpAction*>::const_iterator aj =
+                 plan_->steps().begin();
+             aj != plan_->steps().end(); aj++) {
+          for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
+               ej != (*aj).second->pos_effects().end(); ej++) {
+            for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
+              IloConstraint c7 = actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
+                                != stepTimeVars[stepTime[("ST-" + (*aj).second->name()).c_str()]] 
+                                + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i])
+                                + M * (1 - addEffectVars[addEffect[("SE-" + (*aj).second->name() + "->" + (*ej)).c_str()]][0]);
+              model.add(c7);
+              c7.setName(("C7-A_" + (*ai).first + "-E_" + (*ei) + "-S_" + (*aj).second->name() + "-E_" + (*ej)).c_str());
+            }
+          }
+        }
+      }
+    }
+    // For a step with a step
+    for (std::map<size_t, IlpAction*>::const_iterator ai =
+             plan_->steps().begin();
+         ai != plan_->steps().end(); ai++) {
+      for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
+           ei != (*ai).second->pos_effects().end(); ei++) {
+        for (std::map<size_t, IlpAction*>::const_iterator aj =
+                 plan_->steps().begin();
+             aj != plan_->steps().end(); aj++) {
+          if (ai == aj) {
+            continue;
+          }
+          for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
+               ej != (*aj).second->pos_effects().end(); ej++) {
+            IloConstraint c7 = stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] 
+                              != stepTimeVars[stepTime[("ST-" + (*aj).second->name()).c_str()]] 
+                              + M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0])
+                              + M * (1 - addEffectVars[addEffect[("SE-" + (*aj).second->name() + "->" + (*ej)).c_str()]][0]);
+            model.add(c7);
+            c7.setName(("C7-S_" + (*ai).second->name() + "-E_" + (*ei) + "-S_" + (*aj).second->name() + "-E_" + (*ej)).c_str());
+          }
+        }
+      }
+    }
 
 
     
@@ -993,7 +1002,8 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
         }
 
         env.error() << "Failed to optimize LP" << std::endl;
-        throw(-1);
+        env.end();
+        return -1;
     }
 
     IloNumArray vals(env);
@@ -1114,7 +1124,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     std::cerr << "Unknown ILP exception caught" << std::endl;
   }
   env.end();
-  return -1;
+  return 0;
 }
 
 void IlpNode::remove_causal_links() {

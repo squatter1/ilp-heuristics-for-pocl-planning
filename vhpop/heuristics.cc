@@ -1064,9 +1064,13 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
       os << "Solution length: " << ilpSolutionLength << std::endl;
-      std::this_thread::sleep_for(std::chrono::seconds(10));
-
-      rank.push_back(-1.0*plan.serial_no());
+      if (ilpSolutionLength == 0) {
+        rank.push_back(plan.num_steps()
+                     + weight*(plan.num_open_conds() + plan.num_unsafes()));
+      } else {
+        rank.push_back(ilpSolutionLength);
+      }
+      
       break;
     case LIFO:
       rank.push_back(-1.0*plan.serial_no());
