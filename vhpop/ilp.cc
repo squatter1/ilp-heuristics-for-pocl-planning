@@ -808,6 +808,12 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     for (std::map<size_t, IlpAction*>::const_iterator ai =
              plan_->steps().begin();
          ai != plan_->steps().end(); ai++) {
+      // Skip steps
+      std::string stepName = (*ai).second->name();
+      const std::string skipSteps[] = {"board-at-b-2", "drive-to-a-1", "disembark-at-a-5", "walk-to-b-4"};
+      //if (std::find(std::begin(skipSteps), std::end(skipSteps), stepName) != std::end(skipSteps)) {
+      //  continue;
+      //}
       for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
            ci != (*ai).second->conditions().end(); ci++) {
         // Get the number of instances of the precondition that are satisfied before the action
@@ -818,6 +824,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
                                         - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] 
                                         + M * (1 - propVars[prop[("PA-" + (*ci)).c_str()]][j]) <= 0));
           preconditionSatisfied.add(instanceSatisfied);
+          os << "Satisfy: Precondition " << (*ci) << " instance " << j << std::endl;
         }
         preconditionSatisfiedVars.add(preconditionSatisfied);
         preconditionSatisfiedMap[std::make_pair((*ai).second->name(), (*ci))] = preconditionSatisfiedVars.getSize() - 1;
@@ -832,8 +839,10 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
           }
           if ((*si).second->neg_effects().count(*ci) > 0) {
             IloNumVar instanceDeleted(env, 0, 1, IloNumVar::Bool);
-            model.add(instanceDeleted == (stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] <= 0));
+            model.add(instanceDeleted == (stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] 
+                                        - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] <= 0));
             preconditionDeleted.add(instanceDeleted);
+            os << "Deleted: Precondition " << (*ci) << " deleted by step " << (*si).second->name() << std::endl;
           }
         }
         preconditionDeletedVars.add(preconditionDeleted);
@@ -874,22 +883,95 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
                 propTimeVars[propTime[("PT-" + (*ei)).c_str()]][j] 
                 + M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0])
                 - 2 * M * (1 - propVars[prop[("PA-" + (*ei)).c_str()]][j]));
-          IloConstraint m1 = stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] == 2;
-          model.add(m1);
-          m1.setName("M1");
-          IloConstraint m2 = propTimeVars[propTime[("PT-" + (*ei)).c_str()]][j] == 3;
-          model.add(m2);
-          m2.setName("M2");
         }
         model.add(firstAchiever);
         firstAchiever.setName(("C6-S_" + (*ai).second->name() + "-E_" + (*ei)).c_str());
       }
     }
 
-    // Action named board-at-a must be 0
-    model.add(actionVars[action["AU-board-at-a"]][0] == 0);
+    // TODO need some kind of way to prevent add effects stacking
+    // EG currently we can have both a1 and a2 add p1, giving two instances: p1_1 and p1_2, but the time restrictions are both applied to p1_1 and so p1_2 can be at time 0
+    // Constraint set 7: If two actions/steps are first achievers of the same proposition, then they must be at different times
+    //// For an action with an action
+    //for (std::map<std::string, IlpAction*>::const_iterator ai =
+    //         problem_->actions().begin();
+    //     ai != problem_->actions().end(); ai++) {
+    //  for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
+    //       ei != (*ai).second->pos_effects().end(); ei++) {
+    //    for (std::map<std::string, IlpAction*>::const_iterator aj =
+    //             problem_->actions().begin();
+    //         aj != problem_->actions().end(); aj++) {
+    //      if (ai == aj) {
+    //        continue;
+    //      }
+    //      for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
+    //           ej != (*aj).second->pos_effects().end(); ej++) {
+    //        for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
+    //          for (int j = 0; j < actionVars[action[("AU-" + (*aj).first).c_str()]].getSize(); j++) {
+    //            IloConstraint c7 = actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
+    //                              != actionTimeVars[actionTime[("AT-" + (*aj).first).c_str()]][j] 
+    //                              + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i])
+    //                              + M * (1 - addEffectVars[addEffect[("AE-" + (*aj).first + "->" + (*ej)).c_str()]][j]);
+    //            model.add(c7);
+    //            c7.setName(("C7-A_" + (*ai).first + "-E_" + (*ei) + "-A_" + (*aj).first + "-E_" + (*ej)).c_str());
+    //          }
+    //        }
+    //      }
+    //    }
+    //  }
+    //}
+    //// For an action with a step
+    //for (std::map<std::string, IlpAction*>::const_iterator ai =
+    //         problem_->actions().begin();
+    //     ai != problem_->actions().end(); ai++) {
+    //  for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
+    //       ei != (*ai).second->pos_effects().end(); ei++) {
+    //    for (std::map<size_t, IlpAction*>::const_iterator aj =
+    //             plan_->steps().begin();
+    //         aj != plan_->steps().end(); aj++) {
+    //      for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
+    //           ej != (*aj).second->pos_effects().end(); ej++) {
+    //        for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
+    //          IloConstraint c7 = actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
+    //                            != stepTimeVars[stepTime[("ST-" + (*aj).second->name()).c_str()]] 
+    //                            + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i])
+    //                            + M * (1 - addEffectVars[addEffect[("SE-" + (*aj).second->name() + "->" + (*ej)).c_str()]][0]);
+    //          model.add(c7);
+    //          c7.setName(("C7-A_" + (*ai).first + "-E_" + (*ei) + "-S_" + (*aj).second->name() + "-E_" + (*ej)).c_str());
+    //        }
+    //      }
+    //    }
+    //  }
+    //}
+    //// For a step with a step
+    //for (std::map<size_t, IlpAction*>::const_iterator ai =
+    //         plan_->steps().begin();
+    //     ai != plan_->steps().end(); ai++) {
+    //  for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
+    //       ei != (*ai).second->pos_effects().end(); ei++) {
+    //    for (std::map<size_t, IlpAction*>::const_iterator aj =
+    //             plan_->steps().begin();
+    //         aj != plan_->steps().end(); aj++) {
+    //      if (ai == aj) {
+    //        continue;
+    //      }
+    //      for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
+    //           ej != (*aj).second->pos_effects().end(); ej++) {
+    //        IloConstraint c7 = stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] 
+    //                          != stepTimeVars[stepTime[("ST-" + (*aj).second->name()).c_str()]] 
+    //                          + M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0])
+    //                          + M * (1 - addEffectVars[addEffect[("SE-" + (*aj).second->name() + "->" + (*ej)).c_str()]][0]);
+    //        model.add(c7);
+    //        c7.setName(("C7-S_" + (*ai).second->name() + "-E_" + (*ei) + "-S_" + (*aj).second->name() + "-E_" + (*ej)).c_str());
+    //      }
+    //    }
+    //  }
+    //}
 
-    // Constraint set 7: Step ordering constraints TODO
+
+    
+
+    // Constraint set 8: Step ordering constraints TODO    
 
     IloCplex cplex(model);
     if (verbosity == 0) cplex.setOut(env.getNullStream());
@@ -902,9 +984,10 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
         IloConstraintArray infeasibleConstraints(env);
         cplex.getConflict(infeasibleConstraints);
         
+        os << std::endl << "Num Infeasible Constraints: " << infeasibleConstraints.getSize() << std::endl;
         // Print or log infeasible constraints
         for (IloInt i = 0; i < infeasibleConstraints.getSize(); ++i) {
-            std::cout << "Infeasible Constraint: " << infeasibleConstraints[i] << std::endl;
+            os << "Infeasible Constraint: " << infeasibleConstraints[i] << std::endl << std::endl;
         }
 
         env.error() << "Failed to optimize LP" << std::endl;
@@ -1046,7 +1129,7 @@ void IlpNode::remove_causal_links() {
     // If from is not init state, add link_prop to problem init state and delete at start of link
     if (from) {
       problem_->add_init_prop(link_prop);
-      //from->add_neg_effect(link_prop);
+      from->add_neg_effect(link_prop);
     }
     // If to is not goal state, add link_prop at end of link
     if (to) {

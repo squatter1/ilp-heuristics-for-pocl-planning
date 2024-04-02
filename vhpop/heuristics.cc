@@ -1056,15 +1056,17 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
 
     std::ostream& os = std::cout;
     const IlpNode ilpNode = IlpNode(problem, plan);
+    // If node has at least 5 steps, print it
+    os << std::endl << std::endl << std::endl << std::endl << std::endl;
     os << ilpNode;
+    size_t ilpSolutionLength = ilpNode.solve(os, 2);
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
-      //rank.push_back(solutionLengthNode);
-      os << "Solution length: " << ilpNode.solve(os, 2) << std::endl;
-      rank.push_back(-1.0*plan.serial_no());
-      // wait for 10 seconds
+      os << "Solution length: " << ilpSolutionLength << std::endl;
       std::this_thread::sleep_for(std::chrono::seconds(10));
+
+      rank.push_back(-1.0*plan.serial_no());
       break;
     case LIFO:
       rank.push_back(-1.0*plan.serial_no());
