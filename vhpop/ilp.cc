@@ -891,6 +891,8 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
 
     // TODO need some kind of way to prevent add effects stacking
     // EG currently we can have both a1 and a2 add p1, giving two instances: p1_1 and p1_2, but the time restrictions are both applied to p1_1 and so p1_2 can be at time 0
+    // c7 is not working as expected, maybe tie prop instances to specific add effects (or init if added by init) (is number prop instances always >= number of prop add effects?)
+
     // Constraint set 7: If two actions/steps are first achievers of the same proposition, then they must be at different times
     //// For an action with an action
     //for (std::map<std::string, IlpAction*>::const_iterator ai =
