@@ -1056,17 +1056,20 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
 
     std::ostream& os = std::cout;
     const IlpNode ilpNode = IlpNode(problem, plan);
-    // If node has at least 5 steps, print it
-    os << std::endl << std::endl << std::endl << std::endl << std::endl;
-    os << ilpNode;
+    //os << std::endl << std::endl << std::endl << std::endl << std::endl;
+    //os << ilpNode;
+    os << std::endl;
+    // print the node, note that .plan() will only give a reference to the plan
+    //os << (*ilpNode.plan());
     size_t ilpSolutionLength = ilpNode.solve(os, 2);
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
       os << "Solution length: " << ilpSolutionLength << std::endl;
       if (ilpSolutionLength == 0) {
+        os << "Revised solution length: " << (plan.num_steps() + 0.5*(plan.num_open_conds() + plan.num_unsafes())) << std::endl;
         rank.push_back(plan.num_steps()
-                     + weight*(plan.num_open_conds() + plan.num_unsafes()));
+                     + 0.5*(plan.num_open_conds() + plan.num_unsafes()));
       } else {
         rank.push_back(ilpSolutionLength);
       }
