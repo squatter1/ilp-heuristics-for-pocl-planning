@@ -853,7 +853,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       }
     }
 
-    // Constraint set 7: each instance of p must be 1 time unit after an achiever of p
+    // Constraint set 6: each non init instance of p must be associated with an achiever of p
     for (std::set<std::string>::const_iterator pi = 
              problem_->props().begin();
           pi != problem_->props().end(); pi++) {
@@ -864,17 +864,18 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
           model.add(propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i] == 0);
           continue;
         }
-        // Other prop instances must be 1 time unit after an achiever of p if they exist
-        IloOr propAchieved(env);
-        propAchieved.add(propVars[prop[("PA-" + (*pi)).c_str()]][i] == 0);
+        // Sum the number of actions which achieve this prop
+        IloNumVarArray propAchieved(env);
         for (std::map<std::string, IlpAction*>::const_iterator ai =
                  problem_->actions().begin();
              ai != problem_->actions().end(); ai++) {
           if ((*ai).second->pos_effects().count(*pi) > 0) {
             for (int j = 0; j < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); j++) {
-              propAchieved.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][j] + 1 <=
-                    propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
-                    + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]][j]));
+              IloNumVar instanceAchieved(env, 0, 1, IloNumVar::Bool);
+              model.add(instanceAchieved == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
+                                          - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][j]  
+                                          - M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]][j]) > 0));
+              propAchieved.add(instanceAchieved);
             }
           }
         }
@@ -882,26 +883,44 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
                  plan_->steps().begin();
              ai != plan_->steps().end(); ai++) {
           if ((*ai).second->pos_effects().count(*pi) > 0) {
-            for (int j = 0; j < addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]].getSize(); j++) {
-              propAchieved.add(stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] + 1 <=
-                    propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
-                    + M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]][j]));
-            }
+            IloNumVar instanceAchieved(env, 0, 1, IloNumVar::Bool);
+            model.add(instanceAchieved == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
+                                        - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]]
+                                        - M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]][0]) > 0));
+            propAchieved.add(instanceAchieved);
           }
         }
-        model.add(propAchieved);
-        propAchieved.setName(("C7-" + (*pi) + "[" + std::to_string(i) + "]").c_str());
+        // Sum the number of instances of the prop that are satisfied before or at the same time as this instance
+        IloNumVarArray propSatisfied(env);
+        for (int j = 0; j < propVars[prop[("PA-" + (*pi)).c_str()]].getSize(); j++) {
+          // If j=0 and init prop, then continue, or if j=i then continue
+          if ((j == 0 && problem_->init().count(*pi) > 0) || j == i) {
+            continue;
+          }
+          // Else, instanceSatisifed is 1 if the prop is satisfied before or at the same time as this instance
+          IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Bool);
+          model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][j] 
+                                      - propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i] <= 0));
+          propSatisfied.add(instanceSatisfied);
+        }
+        // Prop must be not satisfied, or have more achievers than satisfied instances
+        IloConstraint propHasAchiever = IloSum(propAchieved) - IloSum(propSatisfied) + M * (1 - propVars[prop[("PA-" + (*pi)).c_str()]][i]) > 0;
+        model.add(propHasAchiever);
+        propHasAchiever.setName(("C6-P_" + (*pi) + "-" + std::to_string(i)).c_str());
       }
     }
 
-    // Constraint set 8: Step ordering constraints TODO this should avoid mutex because ordering constraints are used to avoid mutex 
+    // Constraint set 7: Step ordering constraints TODO this should avoid mutex because ordering constraints are used to avoid mutex 
     for (std::map<size_t, size_t>::const_iterator oi = plan_->orderings().begin();
          oi != plan_->orderings().end(); oi++) {
-      IloConstraint c8 = stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).first)->name()).c_str()]] 
+      IloConstraint c7 = stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).first)->name()).c_str()]] 
                        - stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).second)->name()).c_str()]] < 0;
-      model.add(c8);
-      c8.setName(("C8-S_" + plan_->steps().at((*oi).first)->name() + "-S_" + plan_->steps().at((*oi).second)->name()).c_str());
+      model.add(c7);
+      c7.setName(("C7-S_" + plan_->steps().at((*oi).first)->name() + "-S_" + plan_->steps().at((*oi).second)->name()).c_str());
     }
+
+    // Constraint set 9: Mutex constraints (needed if step ordering constraints aren' required to break all mutex possibilities)
+
 
     IloCplex cplex(model);
     if (verbosity < 2) cplex.setOut(env.getNullStream());
@@ -1008,12 +1027,14 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
         }
       }
       // Iterate through both dimensions of the actionTimeVars array
-      std::map<std::string, int> actionTimeVals;
+      std::map<int, std::vector<std::string>> actionTimeVals;
       for (std::map<std::string, int>::const_iterator ai = actionTime.begin();
            ai != actionTime.end(); ai++) {
         cplex.getValues(vals, actionTimeVars[(*ai).second]);
         for (int i = 0; i < actionTimeVars[(*ai).second].getSize(); i++) {
-          actionTimeVals[(*ai).first.substr(3) + '-' + std::to_string(i)] = std::round(vals[i]);
+          if (actionVals[(*ai).first.substr(3) + '-' + std::to_string(i)] == 1) {
+            actionTimeVals[std::round(vals[i])].push_back((*ai).first.substr(3) + '-' + std::to_string(i));
+          }
         }
       }
       // Iterate through the single dimension of the stepTimeVars array
@@ -1022,32 +1043,54 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
            ai != stepTime.end(); ai++) {
         // Add val of 1 to actionVals and time to actionTimeVals
         actionVals["STEP:" + (*ai).first.substr(3)] = 1;
-        actionTimeVals["STEP:" + (*ai).first.substr(3)] = std::round(vals[(*ai).second]);
+        actionTimeVals[std::round(vals[(*ai).second])].push_back("STEP:" + (*ai).first.substr(3));
       }
-      // Add (action, time) pairs to sorted_actions
-      std::vector<std::pair<std::string, int>> sorted_actions;
-      for (std::map<std::string, int>::const_iterator ai = actionVals.begin();
-           ai != actionVals.end(); ai++) {
-        if ((*ai).second == 1) {
-          sorted_actions.push_back(std::make_pair((*ai).first, actionTimeVals[(*ai).first]));
+      // Iterate through the single dimension of the propVars array
+      std::map<std::pair<std::string, int>, int> propVals;
+      // For each prop and instance, get the value
+      for (std::map<std::string, int>::const_iterator ai = prop.begin();
+           ai != prop.end(); ai++) {
+        cplex.getValues(vals, propVars[(*ai).second]);
+        for (int i = 0; i < propVars[(*ai).second].getSize(); i++) {
+          // If (*ai).first contains the substring 'link', then skip
+          if ((*ai).first.find("link") != std::string::npos) {
+            continue;
+          }
+          propVals[std::make_pair((*ai).first.substr(3), i)] = std::round(vals[i]);
         }
       }
-      // Sort the actions by time
-      std::sort(sorted_actions.begin(), sorted_actions.end(), [](const std::pair<std::string, int>& a, const std::pair<std::string, int>& b) {
-        return a.second < b.second;
-      });
-      // Print the sorted actions
-      os << "INIT";
-      int last_time = -1;
-      for (const auto& action : sorted_actions) {
-        if (action.second == last_time) {
-          os << " AND " << action.first;
-        } else {
-          os << " -> " << action.first;
+      // Iterate through the single dimension of the propTimeVars array
+      std::map<int, std::vector<std::pair<std::string, int>>> propTimeVals;
+      // For each prop and instance, get the time value
+      for (std::map<std::string, int>::const_iterator ai = propTime.begin();
+           ai != propTime.end(); ai++) {
+        cplex.getValues(vals, propTimeVars[(*ai).second]);
+        for (int i = 0; i < propTimeVars[(*ai).second].getSize(); i++) {
+          if (propVals[std::make_pair((*ai).first.substr(3), i)] == 1) {
+            propTimeVals[std::round(vals[i])].push_back(std::make_pair((*ai).first.substr(3), i));
+          }
         }
-        last_time = action.second;
       }
-      os << " -> GOAL" << std::endl;
+
+      // Print the sorted actions and props
+      os << "INIT" << std::endl;
+      for (int i = 0; i <= upperBound; i++) {
+        if (propTimeVals.count(i) > 0) {
+          os << i << ": ";
+          for (std::pair<std::string, int> prop : propTimeVals[i]) {
+            os << prop.first << "[" << prop.second << "] ";
+          }
+          os << std::endl;
+        }
+        if (actionTimeVals.count(i) > 0) {
+          os << i << ": ";
+          for (std::string action : actionTimeVals[i]) {
+            os << action << " ";
+          }
+          os << std::endl;
+        }
+      }
+      os << "GOAL" << std::endl;
     }
 
     env.end();

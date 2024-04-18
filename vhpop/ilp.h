@@ -224,6 +224,9 @@ struct IlpNode {
     /* Finds the shortest solution length of the problem from this node with an ILP by adding delete relaxed problem actions */
     const size_t solve(std::ostream& os, short int verbosity = 0) const;
 
+    /* Finds the shortest solution length of the problem from this node with an ILP by adding delete relaxed problem actions, relaxed from an ILP to an LP */
+    const size_t solve_relaxed(std::ostream& os, short int verbosity = 0) const;
+
   private:
     /* Node id (serial number). */
     mutable size_t id_;

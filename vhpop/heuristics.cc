@@ -1054,25 +1054,27 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     //os << "Solution length: " << solutionLengthNode << std::endl;
     //os << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
-    std::ostream& os = std::cout;
-    const IlpNode ilpNode = IlpNode(problem, plan);
-    //os << std::endl << std::endl << std::endl << std::endl << std::endl;
-    //os << ilpNode;
-    os << std::endl;
-    // print the node, note that .plan() will only give a reference to the plan
-    //os << (*ilpNode.plan());
-    size_t ilpSolutionLength = ilpNode.solve(os, 2);
+    //std::ostream& os = std::cout;
+    //const IlpNode ilpNode = IlpNode(problem, plan);
+    ////os << std::endl << std::endl << std::endl << std::endl << std::endl;
+    ////os << ilpNode;
+    //os << std::endl;
+    //// print the node, note that .plan() will only give a reference to the plan
+    ////os << (*ilpNode.plan());
+    //size_t ilpSolutionLength = ilpNode.solve_relaxed(os, 2);
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
-      os << "Solution length: " << ilpSolutionLength << std::endl;
-      if (ilpSolutionLength == 0) {
-        os << "Revised solution length: " << (plan.num_steps() + 0.5*(plan.num_open_conds() + plan.num_unsafes())) << std::endl;
-        rank.push_back(plan.num_steps()
+      //os << "Solution length: " << ilpSolutionLength << std::endl;
+      //if (ilpSolutionLength == 0) {
+      //  os << "Revised solution length: " << (plan.num_steps() + 0.5*(plan.num_open_conds() + plan.num_unsafes())) << std::endl;
+      //  rank.push_back(plan.num_steps()
+      //               + 0.5*(plan.num_open_conds() + plan.num_unsafes()));
+      //} else {
+      //  rank.push_back(ilpSolutionLength);
+      //}
+      rank.push_back(plan.num_steps()
                      + 0.5*(plan.num_open_conds() + plan.num_unsafes()));
-      } else {
-        rank.push_back(ilpSolutionLength);
-      }
       
       break;
     case LIFO:
