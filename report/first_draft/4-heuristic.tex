@@ -1,15 +1,50 @@
 \chapter{Delete Relaxation Heuristic}\label{chap:heuristic}
 
-\section{Problem Relaxation Simplifications}
-Explanation of the convertion of causal links to propositions.\\
+In this section we define the integer linear program model $\mathit{ILP}(\mathcal{P}^+)$, which is the ILP formulation of a delete relaxed POCL planning problem $\mathcal{P}^+$. The goal of this ILP model is to ensure that a partial POCL plan $P$ is a relaxed POCL plan for $(\mathcal{P}^+)$ if and only if there is a corresponding feasible solution to $\mathit{ILP}(\mathcal{P}^+)$ whose cost is equivalent to the number of actions in $P$. This mapping will be injective, there may be more than one feasible solution corresponding to each relaxed POCL plan.
 
-\section{Delete Relaxation Heuristic}
-ILP model.\\
+\section{Converting Causal Links to Propositions}
 
-\section{Delete and Causal Link Relaxation Heuristic}
-Change this and previous section title, it is not clear exactly what is being relaxed. `Heuristic addressing x and y'\\
-Use the problem class matrix, note that delete effects in domain are not completely all gone, as causal links are still respected using our encoding.\\
-ILP model. In P because we remove plan step delete and causal links.\\
+This ILP model must respect the causal links within $P$, but cannot directly deal with causal links. Hence, we first establish a method of converting a causal link into a proposition for a partial POCL plan $P$.\\
 
-\section{Proof}
+Explain convertion method.\\
+
+Proof of convertion method (look at pascal 2013 paper).\\
+
+Explain why this is better than the pascal 2013 method, complexity proof if required.
+
+\section{ILP Formulation of a Delete Relaxed POCL Problem}
+We can now define the ILP model $\mathit{ILP}(\mathcal{P}^+)$, where $\mathcal{P}^+=(V, A, P_{s_I,g})$ and $P_{s_I,g}=(PS_I,\prec_I,CL_I)$.\\
+
+Specify what we are doing in this section! Eg mention complexity talk, and that we will have an example later!\\
+
+Firstly, we define the variables of $\mathit{ILP}(\mathcal{P}^+)$. Each solution of this ILP will represent a delete relaxed POCL plan, and we will call this plan $P$ to more simply explain the role of each variable in representing such a plan. Some of these variables are defined with an upper bound on solution length $\mathit{ub}$ which will be formally defined and proved later.\\
+
+\textbf{Proposition Variables:} $UV=\{UV_{v,0} \in \{0,1\} \text{ for each } v\in V\}\cup\{UV_{v,ps} \in \{0,1\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v\in V\}$. For each proposition $v$, we have a variable for its initial instance, and for each possible future instance after each deletion of $v$. Set to $1$ if and only if the proposition instance is achieved.\\
+\textbf{Action Variables:} $UA=\{UA_{a,0,0} \in \{0,1\} \text{ for each } a\in A\}\cup\{UA_{a,v,ps} \in \{0,1\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v\in \Add(a), \text{ for each } a\in A\}$. For each action $a$, we have a variable for its initial execution, and for each possible additional execution required to achieve its positive effect propositions. Set to $1$ if and only if the action instance is executed.\\
+\textbf{Action Add Effect Variables:} $EA=\{EA_{a,v_a,0,0} \in \{0,1\} \text{ for each } v_a\in \Add(a), \text{ for each } a\in A\}\cup\{EA_{a,v_a,v_d,ps} \in \{0,1\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v_a\in \Add(a), \text{ for each } v\in \Add(a), \text{ for each } a\in A\}$. We have a variable for each add effect $v_a\in \Add(a_{v_d,ps})$ of each instance $a_{v_d,ps}$ of an action $a$. Set to $1$ if and only if this action instance is the first achiever of an instance of $v_a$.\\
+\textbf{Step Add Effect Variables:} $ES=\{ES_{ps,v} \in \{0,1\} \text{ for each } v\in \Add(ps), \text{ for each } ps \in PS_I$. We have a variable for each add effect $v\in \Add(ps)$ of each plan step $ps$. Set to $1$ if and only if this plan step is the first achiever of an instance of $v$.\\
+\textbf{Proposition Time Variables:} $TV=\{TV_{v,0} \in \{0,\cdots,\mathit{ub}\} \text{ for each } v\in V\}\cup\{TV_{v,ps} \in \{0,\cdots,\mathit{ub}\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v\in V\}$. For each proposition instance, its time variable is set to the time step that it is achieved. If it is not achieved then the time is not constrained.\\
+\textbf{Action Time Variables:} $TA=\{TA_{a,0,0} \in \{0,\cdots,\mathit{ub}\} \text{ for each } a\in A\}\cup\{TA_{a,v,ps} \in \{0,\cdots,\mathit{ub}\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v\in \Add(a), \text{ for each } a\in A\}$. For each action instance, its time variable is set to the time step that it is executed. If it is not executed then the time is not constrained.\\
+\textbf{Step Time Variables:} $TS=\{TS_{ps} \in \{0,\cdots,\mathit{ub}\} \text{ for each } ps \in PS_I\}$. For each time step, its time variable is set to the time step that it is executed.\\
+
+The objective function is defined as: \[\mathit{min}\left(|PS| + \sum UA\right)\]\\
+And the constraints are as follows:\\
+\textbf{Goals Achieved (C1):} For each goal proposition, ensure that at least one of its instances is achieved after every possible deletion.\[\forall v_G\in G,\bigvee\limits_{UV_{v_G,ps}\in UV}\left(\bigwedge\limits_{\{0\}\cup \{ps_D\in PS\text{ s.t. } v_G\in \Del(ps_D)\}}TV_{v_G,ps}-TS_{ps_D}>0\right)\]
+\textbf{Actions and Steps Require Their Precondition (C2):}\\
+\textbf{First Achievers Must be Executed (C3):}\\
+\textbf{Achieved Propositions Have an Achiever (C4):}\\
+\textbf{Preconditions Precede Their Action/Step (C5):}\\
+\textbf{Achievers Precede Their Achievements (C6):}\\
+\textbf{Achievements Follow Their Achievers (C7):}\\
+\textbf{Step Ordering (C8):}\\
+
 Proof of bound.\\
+
+Proof of ILP solution matching a delete relaxed POCL plan.\\
+
+Growth of num variables and num constraints over increase in plan steps, delete effects, causal links, etc. (look at fixed parameter tractability).\\
+
+Example instantiation of the ILP model based on previous example plans.\\
+
+\section{TODO: other heuristics}
+Sections for each other heuristic, eg ignore both causal links and delete effects (should be P).

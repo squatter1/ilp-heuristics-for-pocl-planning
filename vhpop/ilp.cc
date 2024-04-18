@@ -595,7 +595,8 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     IloNumVarArray stepTimeVars(env);
     IloArray<IloNumVarArray> actionVars(env);
     IloArray<IloNumVarArray> actionTimeVars(env);
-    IloArray<IloNumVarArray> addEffectVars(env); // Add effect vars do take into account duplicate actions, but don't take into account duplicate props
+    // Add effect vars take into account duplicate actions, but don't take into account duplicate props (otherwise they would be 3D)
+    IloArray<IloNumVarArray> addEffectVars(env); 
   
     IloEnv env = model.getEnv();  
 
@@ -644,7 +645,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       propTime[("PT-" + (*ai)).c_str()] = propTimeVars.getSize() - 1;
     }
 
-    // Create the step and stepTime variables, as well as associated addEffect variables
+    // Create stepTime variables, as well as associated addEffect variables
     for (std::map<size_t, IlpAction*>::const_iterator ai =
              plan_->steps().begin();
          ai != plan_->steps().end(); ai++) {
@@ -691,26 +692,20 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     }
     model.add(IloMinimize(env, actionUsage));
 
-    // Constraint set 1: The goals must be achieved
     for (std::set<std::string>::const_iterator ai = problem_->goal().begin();
          ai != problem_->goal().end(); ai++) {
-      IloOr goalAchieved(env);
-      // For each instance of this goal prop, add the propVar to the goalAchieved expression
-      for (int i = 0; i < propVars[prop[("PA-" + (*ai)).c_str()]].getSize(); i++) {
-        IloAnd instanceAchieved(env);
-        instanceAchieved.add(propVars[prop[("PA-" + (*ai)).c_str()]][i] == 1);
-        // For each step that deletes this prop, the time of the prop must be greater than the time of the step
-        for (std::map<size_t, IlpAction*>::const_iterator si =
-                 plan_->steps().begin();
-             si != plan_->steps().end(); si++) {
-          if ((*si).second->neg_effects().count(*ai) > 0) {
-            instanceAchieved.add(propTimeVars[propTime[("PT-" + (*ai)).c_str()]][i] - stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] > 0);
-          }
+      // Get the number of steps which have this prop as a neg effect
+      size_t deletions = 0;
+      for (std::map<size_t, IlpAction*>::const_iterator si =
+               plan_->steps().begin();
+           si != plan_->steps().end(); si++) {
+        if ((*si).second->neg_effects().count(*ai) > 0) {
+          deletions++;
         }
-        goalAchieved.add(instanceAchieved);
       }
-      model.add(goalAchieved);
-      goalAchieved.setName(("C1-" + (*ai)).c_str());
+      IloConstraint c1 = IloSum(propVars[prop[("PA-" + (*ai)).c_str()]]) - deletions >= 1;
+      model.add(c1);
+      c1.setName(("C1-" + (*ai)).c_str());
     }
 
     // Constraint set 2: Actions require their preconditions
@@ -858,72 +853,6 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       }
     }
 
-    // Constraint set 6: If a is the first achiever of p, then a must precede p by 1 time unit
-    //std::map<std::string, std::vector<std::pair<std::string, int>>> propAchievers;
-    for (std::map<std::string, IlpAction*>::const_iterator ai =
-             problem_->actions().begin();
-         ai != problem_->actions().end(); ai++) {
-      for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
-           ei != (*ai).second->pos_effects().end(); ei++) {
-        for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
-          IloOr firstAchiever(env);
-          firstAchiever.add(addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i] == 0);
-          for (int j = 0; j < propVars[prop[("PA-" + (*ei)).c_str()]].getSize(); j++) {
-            firstAchiever.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] + 1 ==
-                  propTimeVars[propTime[("PT-" + (*ei)).c_str()]][j]
-                  + M * (1 - propVars[prop[("PA-" + (*ei)).c_str()]][j]));
-          }
-          model.add(firstAchiever);
-          firstAchiever.setName(("C6-A_" + (*ai).first + "-E_" + (*ei)).c_str());
-          //// For each propAchiever of this prop, this action cannot be at the same time as the propAchiever
-          //for (std::pair<std::string, int> propAchiever : propAchievers[(*ei)]) {
-          //  IloConstraint c6 = actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
-          //                  != actionTimeVars[actionTime[("AT-" + propAchiever.first).c_str()]][propAchiever.second];
-          //  model.add(c6);
-          //  c6.setName(("C6-A_" + (*ai).first + "-A_" + propAchiever.first).c_str());
-          //  os << (*ai).first << " != " << propAchiever.first << std::endl;
-          //}
-          //// Add this action to the list of propAchievers
-          //propAchievers[(*ei)].push_back(std::make_pair((*ai).first, i));
-        }
-      }
-    }
-    //std::map<std::string, std::vector<std::string>> propAchieverSteps;
-    for (std::map<size_t, IlpAction*>::const_iterator ai =
-             plan_->steps().begin();
-         ai != plan_->steps().end(); ai++) {
-      for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
-           ei != (*ai).second->pos_effects().end(); ei++) {
-        IloOr firstAchiever(env);
-        firstAchiever.add(addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0] == 0);
-        for (int j = 0; j < propVars[prop[("PA-" + (*ei)).c_str()]].getSize(); j++) {
-          firstAchiever.add(stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] + 1 ==
-                propTimeVars[propTime[("PT-" + (*ei)).c_str()]][j]
-                + M * (1 - propVars[prop[("PA-" + (*ei)).c_str()]][j]));
-        }
-        model.add(firstAchiever);
-        firstAchiever.setName(("C6-S_" + (*ai).second->name() + "-E_" + (*ei)).c_str());
-        //// For each propAchiever of this prop, this step cannot be at the same time as the propAchiever
-        //for (std::pair<std::string, int> propAchiever : propAchievers[(*ei)]) {
-        //  IloConstraint c6 = stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]]
-        //                  != actionTimeVars[actionTime[("AT-" + propAchiever.first).c_str()]][propAchiever.second];
-        //  model.add(c6);
-        //  c6.setName(("C6-S_" + (*ai).second->name() + "-A_" + propAchiever.first).c_str());
-        //  os << (*ai).second->name() << " != " << propAchiever.first << std::endl;
-        //}
-        //// For each propAchiever step of this prop, this step cannot be at the same time as the propAchiever step
-        //for (std::string propAchieverStep : propAchieverSteps[(*ei)]) {
-        //  IloConstraint c6 = stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]]
-        //                  != stepTimeVars[stepTime[("ST-" + propAchieverStep).c_str()]];
-        //  model.add(c6);
-        //  c6.setName(("C6-S_" + (*ai).second->name() + "-S_" + propAchieverStep).c_str());
-        //  os << (*ai).second->name() << " != " << propAchieverStep << std::endl;
-        //}
-        //// Add this step to the list of propAchiever steps
-        //propAchieverSteps[(*ei)].push_back((*ai).second->name());
-      }
-    }
-
     // Constraint set 7: each instance of p must be 1 time unit after an achiever of p
     for (std::set<std::string>::const_iterator pi = 
              problem_->props().begin();
@@ -943,7 +872,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
              ai != problem_->actions().end(); ai++) {
           if ((*ai).second->pos_effects().count(*pi) > 0) {
             for (int j = 0; j < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); j++) {
-              propAchieved.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][j] + 1 ==
+              propAchieved.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][j] + 1 <=
                     propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
                     + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]][j]));
             }
@@ -954,7 +883,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
              ai != plan_->steps().end(); ai++) {
           if ((*ai).second->pos_effects().count(*pi) > 0) {
             for (int j = 0; j < addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]].getSize(); j++) {
-              propAchieved.add(stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] + 1 ==
+              propAchieved.add(stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] + 1 <=
                     propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
                     + M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]][j]));
             }
@@ -965,74 +894,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       }
     }
 
-    // TODO currently c7 used to prevent add effect stacking, could use invere of constraint 6 instead? Eg each prop instance must be created by an action one time step before
-    // need to tie a specific prop instance to a specific add effect instance somehow
-    // option: for each prop, get all add effect instances of that prop, and ensure respective actions/steps are all at different times.
-    
-    // EG currently we can have both a1 and a2 add p1, giving two instances: p1_1 and p1_2, but the time restrictions are both applied to p1_1 and so p1_2 can be at time 0
-    // c7 is not working as expected, maybe tie prop instances to specific add effects (or init if added by init) (is number prop instances always >= number of prop add effects?)
-
-    // Constraint set 7: Every achieved prop instance must have an achiever one step prior
-    //for (std::set<std::string>::const_iterator pi = problem_->props().begin();
-    //     pi != problem_->props().end(); pi++) {
-    //  for (int i = 0; i < propVars[prop[("PA-" + (*pi)).c_str()]].getSize(); i++) {
-    //    IloOr propAchieved(env);
-    //    propAchieved.add(propVars[prop[("PA-" + (*pi)).c_str()]][i] == 0);
-    //    for (std::map<std::string, IlpAction*>::const_iterator ai =
-    //             problem_->actions().begin();
-    //         ai != problem_->actions().end(); ai++) {
-    //      if ((*ai).second->pos_effects().count(*pi) > 0) {
-    //        for (int j = 0; j < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); j++) {
-    //          propAchieved.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][j] + 1 ==
-    //                propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
-    //                + M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]][j]));
-    //        }
-    //      }
-    //    }
-    //    for (std::map<size_t, IlpAction*>::const_iterator ai =
-    //             plan_->steps().begin();
-    //         ai != plan_->steps().end(); ai++) {
-    //      if ((*ai).second->pos_effects().count(*pi) > 0) {
-    //        for (int j = 0; j < addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]].getSize(); j++) {
-    //          propAchieved.add(stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] + 1 ==
-    //                propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
-    //                + M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]][j]));
-    //        }
-    //      }
-    //    }
-    //    model.add(propAchieved);
-    //    propAchieved.setName(("C7-" + (*pi) + "[" + std::to_string(i) + "]").c_str());
-    //  }
-    //}
-    //
-    //// Constraint set 8: Steps cannot be concurrent (to avoid mutex issues) (TODO: or even better, only constrain if there is a possibility of mutex)
-    //for (std::map<size_t, IlpAction*>::const_iterator ai =
-    //         plan_->steps().begin();
-    //     ai != plan_->steps().end(); ai++) {
-    //  for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
-    //       ei != (*ai).second->pos_effects().end(); ei++) {
-    //    for (std::map<size_t, IlpAction*>::const_iterator aj =
-    //             plan_->steps().begin();
-    //         aj != plan_->steps().end(); aj++) {
-    //      if (ai == aj) {
-    //        continue;
-    //      }
-    //      for (std::set<std::string>::const_iterator ej = (*aj).second->pos_effects().begin();
-    //           ej != (*aj).second->pos_effects().end(); ej++) {
-    //        IloConstraint c7 = stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] 
-    //                          != stepTimeVars[stepTime[("ST-" + (*aj).second->name()).c_str()]];
-    //        model.add(c7);
-    //        c7.setName(("C7-S_" + (*ai).second->name() + "-E_" + (*ei) + "-S_" + (*aj).second->name() + "-E_" + (*ej)).c_str());
-    //      }
-    //    }
-    //  }
-    //}
-
-    // Constraint set 8: Step ordering constraints TODO this should avoid mutex because ordering constraints are used to avoid mutex
-    // Loop through the plan orderings
-    //const std::map<size_t, size_t>& orderings() const {
-    //  return orderings_;
-    //}   
+    // Constraint set 8: Step ordering constraints TODO this should avoid mutex because ordering constraints are used to avoid mutex 
     for (std::map<size_t, size_t>::const_iterator oi = plan_->orderings().begin();
          oi != plan_->orderings().end(); oi++) {
       IloConstraint c8 = stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).first)->name()).c_str()]] 

@@ -101,6 +101,8 @@ The \textit{delete relaxation} of a POCL planning problem $\mathcal{P}=(V, A, P_
     A partial POCL plan $P$ is called a \textit{relaxed POCL plan} (also \textit{relaxed POCL solution}) for a POCL planning problem $\mathcal{P}$ if and only if $P$ is a POCL plan for $\mathcal{P^+}$.
 \end{definition}
 
+TODO: define what a first achiever action/step is, and what it means for a proposition to be achieved (first false then true)
+
 
 \section{Linear Programming}
 \textit{Linear Programming} (LP) is a mathematical optimisation technique used to solve decision-making problems. It converts problems into many dimensional geometric shapes, where each \textit{variable} involved in the problem represents one dimension of the LP, and each \textit{constraint} of the problem is a hyperplane within that space, where one side is the region which \textit{satisfies} the constraint, and the other side is the region which doesn't. The intersection of the satisfied regions for each constraint is called the \textit{feasible region}, which is often a fully bounded shape, and represents every viable solution. The measure of optimality of a solution is represented in an LP by a directional vector, which points in the direction of better solutions. This is called the \textit{objective function}, and by finding the point in the feasible region furthest in the direction of the objective function, we can find the optimal solution to any problem able to be represented as an LP. (TODO: insert figure with a graphical representation of an LP for an example)\\
