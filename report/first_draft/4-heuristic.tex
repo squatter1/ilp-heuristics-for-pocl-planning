@@ -1,50 +1,98 @@
 \chapter{Delete Relaxation Heuristic}\label{chap:heuristic}
 
-In this section we define the integer linear program model $\mathit{ILP}(\mathcal{P}^+)$, which is the ILP formulation of a delete relaxed POCL planning problem $\mathcal{P}^+$. The goal of this ILP model is to ensure that a partial POCL plan $P$ is a relaxed POCL plan for $(\mathcal{P}^+)$ if and only if there is a corresponding feasible solution to $\mathit{ILP}(\mathcal{P}^+)$ whose cost is equivalent to the number of actions in $P$. This mapping will be injective, there may be more than one feasible solution corresponding to each relaxed POCL plan.
+In this section we define the ILP model $\mathit{ILP}(\mathcal{P}^+)$, which is the ILP formulation of a delete relaxed POCL planning problem $\mathcal{P}^+$. The goal of this ILP model is to ensure that a partial POCL plan $P$ is a relaxed POCL plan for $(\mathcal{P}^+)$ if and only if there is a corresponding feasible solution to $\mathit{ILP}(\mathcal{P}^+)$ whose cost is equivalent to the number of actions added to create $P$. This mapping will be injective, there may be more than one feasible solution corresponding to each relaxed POCL plan.
 
-\section{Converting Causal Links to Propositions}
-
-This ILP model must respect the causal links within $P$, but cannot directly deal with causal links. Hence, we first establish a method of converting a causal link into a proposition for a partial POCL plan $P$.\\
-
-Explain convertion method.\\
-
-Proof of convertion method (look at pascal 2013 paper).\\
-
-Explain why this is better than the pascal 2013 method, complexity proof if required.
 
 \section{ILP Formulation of a Delete Relaxed POCL Problem}
-We can now define the ILP model $\mathit{ILP}(\mathcal{P}^+)$, where $\mathcal{P}^+=(V, A, P_{s_I,g})$ and $P_{s_I,g}=(PS_I,\prec_I,CL_I)$.\\
+We can now define the ILP model $\mathit{ILP}(\mathcal{P}^+)$, where $\mathcal{P}^+=(V, A, P_{s_I,g})$ and $P_{s_I,g}=(PS_I,\prec_I,CL_I)$. We will do this by first defining the variables, each of which will represent a member of $x$ in the optimal ILP instance, and then the objective function, which represents $c^Tx$, and finally the constraints, which represent $Ax\geq b$. After the formulation, we will discuss the complexity of the ILP, and how the ILP formulation size grows as $(\mathcal{P}^+)$ grows, and an example ILP will also be described.\\
 
-Specify what we are doing in this section! Eg mention complexity talk, and that we will have an example later!\\
 
-Firstly, we define the variables of $\mathit{ILP}(\mathcal{P}^+)$. Each solution of this ILP will represent a delete relaxed POCL plan, and we will call this plan $P$ to more simply explain the role of each variable in representing such a plan. Some of these variables are defined with an upper bound on solution length $\mathit{ub}$ which will be formally defined and proved later.\\
+All references to the plan steps $\mathit{init}$ and $\mathit{goal}$ are removed from $PS_I$ and $\prec_I$ before creating the model. This is because the model makes reference to $s_I$ and $g$ instead for simplicity. Note that since all causal links have already been compiled, the causal links connecting to these steps will still be respected.\\
 
-\textbf{Proposition Variables:} $UV=\{UV_{v,0} \in \{0,1\} \text{ for each } v\in V\}\cup\{UV_{v,ps} \in \{0,1\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v\in V\}$. For each proposition $v$, we have a variable for its initial instance, and for each possible future instance after each deletion of $v$. Set to $1$ if and only if the proposition instance is achieved.\\
-\textbf{Action Variables:} $UA=\{UA_{a,0,0} \in \{0,1\} \text{ for each } a\in A\}\cup\{UA_{a,v,ps} \in \{0,1\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v\in \Add(a), \text{ for each } a\in A\}$. For each action $a$, we have a variable for its initial execution, and for each possible additional execution required to achieve its positive effect propositions. Set to $1$ if and only if the action instance is executed.\\
-\textbf{Action Add Effect Variables:} $EA=\{EA_{a,v_a,0,0} \in \{0,1\} \text{ for each } v_a\in \Add(a), \text{ for each } a\in A\}\cup\{EA_{a,v_a,v_d,ps} \in \{0,1\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v_a\in \Add(a), \text{ for each } v\in \Add(a), \text{ for each } a\in A\}$. We have a variable for each add effect $v_a\in \Add(a_{v_d,ps})$ of each instance $a_{v_d,ps}$ of an action $a$. Set to $1$ if and only if this action instance is the first achiever of an instance of $v_a$.\\
-\textbf{Step Add Effect Variables:} $ES=\{ES_{ps,v} \in \{0,1\} \text{ for each } v\in \Add(ps), \text{ for each } ps \in PS_I$. We have a variable for each add effect $v\in \Add(ps)$ of each plan step $ps$. Set to $1$ if and only if this plan step is the first achiever of an instance of $v$.\\
-\textbf{Proposition Time Variables:} $TV=\{TV_{v,0} \in \{0,\cdots,\mathit{ub}\} \text{ for each } v\in V\}\cup\{TV_{v,ps} \in \{0,\cdots,\mathit{ub}\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v\in V\}$. For each proposition instance, its time variable is set to the time step that it is achieved. If it is not achieved then the time is not constrained.\\
-\textbf{Action Time Variables:} $TA=\{TA_{a,0,0} \in \{0,\cdots,\mathit{ub}\} \text{ for each } a\in A\}\cup\{TA_{a,v,ps} \in \{0,\cdots,\mathit{ub}\} \text{ for each } ps \in PS_I \text{ such that } v\in\Del(ps), \text{ for each } v\in \Add(a), \text{ for each } a\in A\}$. For each action instance, its time variable is set to the time step that it is executed. If it is not executed then the time is not constrained.\\
-\textbf{Step Time Variables:} $TS=\{TS_{ps} \in \{0,\cdots,\mathit{ub}\} \text{ for each } ps \in PS_I\}$. For each time step, its time variable is set to the time step that it is executed.\\
 
-The objective function is defined as: \[\mathit{min}\left(|PS| + \sum UA\right)\]\\
-And the constraints are as follows:\\
-\textbf{Goals Achieved (C1):} For each goal proposition, ensure that at least one of its instances is achieved after every possible deletion.\[\forall v_G\in G,\bigvee\limits_{UV_{v_G,ps}\in UV}\left(\bigwedge\limits_{\{0\}\cup \{ps_D\in PS\text{ s.t. } v_G\in \Del(ps_D)\}}TV_{v_G,ps}-TS_{ps_D}>0\right)\]
-\textbf{Actions and Steps Require Their Precondition (C2):}\\
-\textbf{First Achievers Must be Executed (C3):}\\
-\textbf{Achieved Propositions Have an Achiever (C4):}\\
-\textbf{Preconditions Precede Their Action/Step (C5):}\\
-\textbf{Achievers Precede Their Achievements (C6):}\\
-\textbf{Achievements Follow Their Achievers (C7):}\\
-\textbf{Step Ordering (C8):}\\
+Firstly, we define the variables of $\mathit{ILP}(\mathcal{P}^+)$. Each solution of this ILP will represent a delete relaxed POCL plan, and we will call this plan $P$ to more simply explain the role of each variable in representing such a plan. Some of these variables are defined with an upper bound on solution length $\mathit{ub}$ which will be formally defined and proved later. For each variable, a range of allowable integer values is provided. These are represented in the ILP problem by additional constraints.\\
 
-Proof of bound.\\
 
-Proof of ILP solution matching a delete relaxed POCL plan.\\
+\textbf{Proposition Usage Variables:} For each proposition $v$, we have a variable for its initial instance, and for each possible future instance after each deletion of $v$. These variables will have a value of $1$ if and only if the proposition instance is achieved.
+\[PU=\{PU_{v,0} \in \{0,1\} \mid v\in V\}\cup\{PU_{v,ps} \in \{0,1\} \mid ps \in PS_I, v\in\Del(ps)\}\]
+\textbf{Action Usage Variables:} For each action $a$, we have a variable for its initial execution, and for each possible additional execution required to achieve its positive effect propositions after they are deleted. These variables will have a value of $1$ if and only if the action instance is executed.
+\begin{align*}
+AU&=\{AU_{a,0,0} \in \{0,1\} \mid a\in A\} \\
+&\cup\{AU_{a,v,ps} \in \{0,1\} \mid ps \in PS_I,a\in A,v\in\Del(ps)\cap \Add (a)\}
+\end{align*}
+\textbf{Action Effect Variables:} For each action usage variable $UA_{a,v,ps}$, we have a variable for each of its add effects. These variables will have a value of 1 if and only if the given action instance is a first achiever of the given effect.
+\[AE=\{AE_{a_f,v_f,ps_f,v_a} \in \{0,1\} \mid AU_{a_f,v_f,ps_f}\in AU, v_a\in \Add (a_f)\}\]
+\textbf{Step Effect Variables:} For each plan step $ps$, we have a variable for each of its add effects. These variables will have a value of 1 if and only if the given plan step is a first achiever of the given effect.
+\[SE=\{SE_{ps,v} \in \{0,1\} \mid ps \in PS_I, v\in \Add(ps)\}\]
+\textbf{Proposition Time Variables:} For each proposition usage variable $PU_{v,ps}$, we have a time variable. These variables will have a value of the execution time of  $PU_{v,ps}$ if  $PU_{v,ps}=1$, and are otherwise unconstrained.
+\[PT=\{PT_{v,ps} \in \{0,\cdots,\mathit{ub}\} \mid  PU_{v,ps}\in PU\}\]
+\textbf{Action Time Variables:} For each action usage variable $AU_{a,v,ps}$, we have a time variable. These variables will have a value of the execution time of  $AU_{a,v,ps}$ if  $AU_{a,v,ps}=1$, and are otherwise unconstrained.
+\[AT=\{AT_{a,v,ps} \in \{0,\cdots,\mathit{ub}\} \mid  AU_{a,v,ps}\in AU\}\]
+\textbf{Step Time Variables:} For each plan step $ps$, we have a time variable. These variables will have the value of the execution time of $ps$.
+\[ST=\{ST_{ps} \in \{0,\cdots,\mathit{ub}\} \mid ps \in PS_I\}\]
 
-Growth of num variables and num constraints over increase in plan steps, delete effects, causal links, etc. (look at fixed parameter tractability).\\
+The objective function returns the minimum number of added actions required to complete the partial plan, and is defined as: \[\text{min }\sum_{AU_{a,v,ps}\in AU} AU_{a,v,ps}\]\\
 
-Example instantiation of the ILP model based on previous example plans.\\
+
+Finally, we define the constraints of $\mathit{ILP}(\mathcal{P}^+)$. The value $M$ used in some of these constraints as a large value used to render constraints either necessarily true or necessarily false under some condition, and is set to $M=ub+2$. Note that a difference of one will cause issues with constraints that use a $+1$ to connect actions with effect propositions on the following time step. Additional variables will be described when necessary to represent the truth value of a linear inequality. For example a variable $v=(y-z\geq 0)$ would have a value of 1 when $y-z\geq 0$ and 0 otherwise. Fully notating these linear equality boolean variables requires multiple constraints to be added, but since the procedure to add these types of variables is well known, I will use the $v=(a^Tx\geq b)$ shorthand for simplicity.\\
+
+
+\textbf{Goals Achieved (C1):} For each goal proposition, ensure that more instances of it are used than are deleted.
+\[\forall v_G\in G:\sum_{PU_{v_G,ps}\in PU}PU_{v_G,ps}-|\{\mathit{PD}_{v_G,ps}\mid ps\in PS_I,v_G\in\Del (ps)\}|\geq 1\]
+\textbf{Actions Require Their Preconditions (C2):} For each action instance, and each of its preconditions, ensure that if the action instance is used, the precondition must have at least one used instance.
+\[\ \forall AU_{a_i,v_i,ps_i}\in AU, \forall v_p\in\Pre (a_i): \sum_{PU_{v_p,ps}\in PU}PU_{v_p,ps}-AU_{a_i,v_i,ps_i}\geq 0\]
+\textbf{Steps Require Their Preconditions (C3):} For each plan step, and each of its preconditions, ensure that the precondition must have at least one used instance.
+\[\ \forall ps_i\in PS_I, \forall v_p\in\Pre (ps): \sum_{PU_{v_p,ps}\in PU}PU_{v_p,ps}\geq 1\]
+\textbf{First Achievers Must be Executed (C4):} For each action effect instance, ensure that if the action instance is the first achiever of this effect, the action instance is used.
+\[ \forall AE_{a_i,v_i,ps_i,v_i}\in AE: AU_{a_i,v_i,ps_i}-AE_{a_i,v_i,ps_i,v_i}\geq 0\]
+\textbf{Propositions Require an Achiever (C5):} For each proposition, the number of used instances cannot surpass the number of times it is achieved, plus one if it is an initial proposition.
+\begin{align*}
+\forall v_i\in V&: \sum_{AE_{a_f,v_f,ps_f,v_i}\in AE}AE_{a_f,v_f,ps_f,v_i}+\sum_{SE_{ps,v_i}\in SE}SE_{ps,v_i}\\&+|s_I\cap \{v_i\}|-\sum_{PU_{v_i,ps}\in PU}PU_{v_i,ps}\geq 0
+\end{align*}
+\textbf{Actions are Preceded by their Preconditions (C6):} For each action instance, and each of its preconditions, ensure that prior to the action being executed the number of instances of the precondition achieved exceed the number of steps which delete the precondition executed. This requires defining two sets of additional linear equality boolean variables.\\
+Firstly, we define a set of action precondition satisfied variables representing whether a precondition instance is achieved prior to the action:
+\[APS=\{APS_{a_i,v_i,ps_i,v_j,ps_j}\in\{0,1\}\mid AU_{a_i,v_i,ps_i}\in AU, v_j\in\Pre (a_i), PU_{v_j,ps_j}\in PU\}\]
+\[\forall APS_{a_i,v_i,ps_i,v_j,ps_j}\in APS: APS_{a_i,v_i,ps_i,v_j,ps_j}=(PT_{v_j,ps_j}-AT_{a_i,v_i,ps_i}\geq 0)\]
+We also define a set of action precondition deleted variables representing whether the precondition is deleted by a given step prior to the action:
+\[APD=\{APD_{a_i,v_i,ps_i,ps_j}\in\{0,1\}\mid AU_{a_i,v_i,ps_i}\in AU, ps_j\in PS_I\}\]
+\[\forall APD_{a_i,v_i,ps_i,ps_j}\in APD: APD_{a_i,v_i,ps_i,ps_j}=(AT_{a_i,v_i,ps_i}-ST_{ps_j}\geq 1)\]
+By utilising these variables we can now define the constraints:
+\begin{align*}
+\forall AU_{a_i,v_i,ps_i}\in AU, \forall v_p\in\Pre (a_i)&: \sum_{PU_{v_p,ps_j}\in PU}(PU_{v_p,ps_j}APS_{a_i,v_i,ps_i,v_p,ps_j})\\&-\sum_{ps_j\in PS_I}APD_{a_i,v_i,ps_i,ps_j}+M(1-AU_{a_i,v_i,ps_i})\geq 1
+\end{align*}
+\textbf{Steps are Preceded by their Preconditions (C7):} For each plan step, and each of its preconditions, ensure that prior to the plan step being executed the number of instances of the precondition achieved exceed the number of other steps which delete the precondition executed. This requires defining two sets of additional linear equality boolean variables.\\
+Firstly, we define a set of step precondition satisfied variables representing whether a precondition instance is achieved prior to the step:
+\[SPS=\{SPS_{ps_i,v_j,ps_j}\in\{0,1\}\mid ps_i\in PS_I, v_j\in\Pre (ps_i), PU_{v_j,ps_j}\in PU\}\]
+\[\forall SPS_{ps_i,v_j,ps_j}\in SPS: SPS_{ps_i,v_j,ps_j}=(PT_{v_j,ps_j}-ST_{ps_i}\geq 0)\]
+We also define a set of step precondition deleted variables representing whether the precondition is deleted by a given other step prior to the step:
+\[SPD=\{SPD_{ps_i,ps_j}\in\{0,1\}\mid ps_i\in PS_I, ps_j\in PS_I\}\]
+\[\forall SPD_{ps_i,ps_j}\in SPD: SPD_{ps_i,ps_j}=(ST_{ps_i}-ST_{ps_j}\geq 1)\]
+By utilising these variables we can now define the constraints:
+\[ \forall ps_i\in PS_I, \forall v_p\in\Pre (ps_i): \sum_{PU_{v_p,ps_j}\in PU}(PU_{v_p,ps_j}SPS_{ps_i,v_p,ps_j})-\sum_{ps_j\in PS_I}SPD_{ps_i,ps_j}\geq 1\]
+\textbf{Propositions are Preceded by an Achiever (C8):} For each proposition instance that is not in $s_I$, ensure that prior to the instance being achieved, the number of actions/steps achieving the proposition exceed the number of other instances of the proposition which are achieved. This requires defining three sets of additional linear equality boolean variables.\\
+Firstly, we define a set of action effect achieved variables representing whether a given action effect achieves the proposition prior to the proposition time of the instance.
+\[AEA=\{AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a}\in\{0,1\}\mid PU_{v_i,ps_i}\in PU,AE_{a_f,v_f,ps_f,v_a}\in AE\}\]
+\[ \forall AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a}\in AEA:AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a}=(PT_{v_i,ps_i}-AT_{a_f,v_f,ps_f}\geq 0)\]
+Next, we define a set of step effect achieved variables representing whether a given step effect achieves the proposition prior to the proposition time of the instance.
+\[SEA=\{SEA_{v_i,ps_i,ps_j,v_j}\in\{0,1\}\mid PU_{v_i,ps_i}\in PU,SE_{ps_j,v_j}\in SE\}\]
+\[ \forall SEA_{v_i,ps_i,ps_j,v_j}\in SEA:SEA_{v_i,ps_i,ps_j,v_j}=(PT_{v_i,ps_i}-ST_{ps_j}\geq 0)\]
+Finally, we define a set of proposition instance achieved variables representing whether a given other instance of the proposition is achieved before the proposition time of the instance.
+\[PIA=\{PIA_{v,ps_i,ps_j}\in\{0,1\}\mid PU_{v,ps_i}\in PU,PU_{v,ps_j}\in PU,ps_i\neq ps_j\}\]
+\[ \forall PIA_{v,ps_i,ps_j}\in PIA:PIA_{v,ps_i,ps_j}=(PT_{v,ps_i}-PT_{v,ps_j}\geq 0)\]
+By utilising these variables we can now define the constraints:
+\begin{align*}
+\forall PU_{v_i,ps_i}\in PU&:\sum_{AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a}\in AEA}(AE_{a_f,v_f,ps_f,v_a}AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a})\\&+\sum_{SEA_{v_i,ps_i,ps_j,v_j}\in SEA}(SE_{ps_j,v_j}SEA_{v_i,ps_i,ps_j,v_j})\\&-\sum_{PIA_{v_i,ps_i,ps_j}\in PIA}PIA_{v_i,ps_i,ps_j}+M(1-PU_{v_i,ps_i})\geq 1
+\end{align*}
+\textbf{Step Orderings (C9):} For each step ordering in $\prec _I$, we enforce that this ordering holds.
+\[ \forall( ps_i\prec ps_j)\in\prec_I: ST_{ps_j}-ST_{ps_i}\geq 1\]
+
+TODO: Proof of bound.\\
+
+TODO: Proof of ILP solution matching a delete relaxed POCL plan. Note how mutex constraints are not necessary as a partial plan fixes mutex with orderings/causal links, and so if those are not implemented then the mutex requirement is not part of the partial plan.\\
+
+TODO: Analyse growth of the ILP formulation over increase in plan steps, delete effects, causal links, etc. (look at fixed parameter tractability).\\
+
+TODO: Example instantiation of the ILP model based on previous example plans.\\
 
 \section{TODO: other heuristics}
 Sections for each other heuristic, eg ignore both causal links and delete effects (should be P).

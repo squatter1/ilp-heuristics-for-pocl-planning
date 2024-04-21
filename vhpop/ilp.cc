@@ -692,6 +692,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     }
     model.add(IloMinimize(env, actionUsage));
 
+    // Constraint set 1: The goals must be achieved
     for (std::set<std::string>::const_iterator ai = problem_->goal().begin();
          ai != problem_->goal().end(); ai++) {
       // Get the number of steps which have this prop as a neg effect
@@ -807,7 +808,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
             }
           }
           // The precondition must be satisfied more than it is deleted
-          IloConstraint c5 = IloSum(preconditionSatisfied) - IloSum(preconditionDeleted) + M * (1 - actionVars[action[("AU-" + (*ai).first).c_str()]][i]) > 0;
+          IloConstraint c5 = IloSum(preconditionSatisfied) - IloSum(preconditionDeleted) + M * (1 - actionVars[action[("AU-" + (*ai).first).c_str()]][i]) >= 1;
           model.add(c5);
           c5.setName(("C5-A_" + (*ai).first + "-P_" + (*ci)).c_str());
         }
