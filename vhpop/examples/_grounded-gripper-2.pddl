@@ -1,0 +1,10 @@
+(define (problem strips-gripper2) (:domain gripper-strips)
+(:init
+    (F0)
+    (F2)
+    (F4)
+    (F10)
+    (F11)
+)
+(:goal (and (F1)))
+)

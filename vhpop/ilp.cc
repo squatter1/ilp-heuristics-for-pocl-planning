@@ -38,10 +38,15 @@ IlpAction::IlpAction(const Action& action, const std::string& name)
       }
     }
   } else {
-    action.print(std::cout, 0, Bindings::EMPTY);
-    condition_formula.print(std::cout, 0, Bindings::EMPTY);
-    std::cout << "Not a conjunction ERROR" << std::endl;
-    return; // Not a conjunction
+    // Check if the condition is an atom
+    const Atom* atom = dynamic_cast<const Atom*>(&condition_formula);
+    if (atom) {
+      add_condition(PredicateTable::name((*atom).predicate()));
+    } else {
+      condition_formula.print(std::cout, 0, Bindings::EMPTY);
+      std::cout << "Not a conjunction ERROR" << std::endl;
+      return; // Not a conjunction
+    }
   }
 
   // Iterate through the EffectList
@@ -126,11 +131,19 @@ IlpProblem::IlpProblem(const Problem& problem)
       if (atom) {
         add_goal_prop(PredicateTable::name((*atom).predicate()));
       } else {
+        std::cout << "Not an atom ERROR" << std::endl;
         continue; // Not an atom
       }
     }
   } else {
-    return; // Not a conjunction
+    // Check if the goal is an atom
+    const Atom* atom = dynamic_cast<const Atom*>(&goal_formula);
+    if (atom) {
+      add_goal_prop(PredicateTable::name((*atom).predicate()));
+    } else {
+      std::cout << "Not a conjunction ERROR" << std::endl;
+      return; // Not a conjunction
+    }
   }
 
   // Add the propositions
@@ -304,7 +317,7 @@ const size_t IlpProblem::solve(std::ostream& os, short int verbosity) const {
     }
 
     IloCplex cplex(model);
-    if (verbosity < 2) cplex.setOut(env.getNullStream());
+    //if (verbosity < 2) cplex.setOut(env.getNullStream());
 
     // Optimize the problem and obtain solution.
     if ( !cplex.solve() ) {
@@ -942,56 +955,89 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       // Iterate through both dimensions of the propVars array
       for (std::map<std::string, int>::const_iterator ai = prop.begin();
            ai != prop.end(); ai++) {
-        cplex.getValues(vals, propVars[(*ai).second]);
+        //cplex.getValues(vals, propVars[(*ai).second]);
         for (int i = 0; i < propVars[(*ai).second].getSize(); i++) {
-          os << "Prop " << (*ai).first << "[" << i << "] = " << vals[i] << std::endl;
+          try {
+            // Use cplex.getValue to get the IloNum value of the variable
+            IloNum val = cplex.getValue(propVars[(*ai).second][i]);
+            os << "Prop " << (*ai).first << "[" << i << "] = " << val << std::endl;
+          } catch (IloException& e) {
+            os << "Prop " << (*ai).first << "[" << i << "] = " << "?" << std::endl;
+          }
         }
       }
       // Iterate through both dimensions of the propTimeVars array
       for (std::map<std::string, int>::const_iterator ai = propTime.begin();
            ai != propTime.end(); ai++) {
-        cplex.getValues(vals, propTimeVars[(*ai).second]);
+        //cplex.getValues(vals, propTimeVars[(*ai).second]);
         for (int i = 0; i < propTimeVars[(*ai).second].getSize(); i++) {
-          os << "Prop Time " << (*ai).first << "[" << i << "] = " << vals[i] << std::endl;
+          try {
+            IloNum val = cplex.getValue(propTimeVars[(*ai).second][i]);
+            os << "Prop Time " << (*ai).first << "[" << i << "] = " << val << std::endl;
+          } catch (IloException& e) {
+            os << "Prop Time " << (*ai).first << "[" << i << "] = " << "?" << std::endl;
+          }
         }
       }
       // Iterate through both dimensions of the actionVars array
       for (std::map<std::string, int>::const_iterator ai = action.begin();
            ai != action.end(); ai++) {
-        cplex.getValues(vals, actionVars[(*ai).second]);
+        //cplex.getValues(vals, actionVars[(*ai).second]);
         for (int i = 0; i < actionVars[(*ai).second].getSize(); i++) {
-          os << "Action " << (*ai).first << "[" << i << "] = " << vals[i] << std::endl;
+          try {
+            IloNum val = cplex.getValue(actionVars[(*ai).second][i]);
+            os << "Action " << (*ai).first << "[" << i << "] = " << val << std::endl;
+          } catch (IloException& e) {
+            os << "Action " << (*ai).first << "[" << i << "] = " << "?" << std::endl;
+          }
         }
       }
       // Iterate through both dimensions of the actionTimeVars array
       for (std::map<std::string, int>::const_iterator ai = actionTime.begin();
            ai != actionTime.end(); ai++) {
-        cplex.getValues(vals, actionTimeVars[(*ai).second]);
+        //cplex.getValues(vals, actionTimeVars[(*ai).second]);
         for (int i = 0; i < actionTimeVars[(*ai).second].getSize(); i++) {
-          os << "Action Time " << (*ai).first << "[" << i << "] = " << vals[i] << std::endl;
+          try {
+            IloNum val = cplex.getValue(actionTimeVars[(*ai).second][i]);
+            os << "Action Time " << (*ai).first << "[" << i << "] = " << val << std::endl;
+          } catch (IloException& e) {
+            os << "Action Time " << (*ai).first << "[" << i << "] = " << "?" << std::endl;
+          }
         }
       }
       // Iterate through both dimensions of the addEffectVars array
       for (std::map<std::string, int>::const_iterator ai = addEffect.begin();
            ai != addEffect.end(); ai++) {
-        cplex.getValues(vals, addEffectVars[(*ai).second]);
+        //cplex.getValues(vals, addEffectVars[(*ai).second]);
         for (int i = 0; i < addEffectVars[(*ai).second].getSize(); i++) {
-          os << "Add Effect " << (*ai).first << "[" << i << "] = " << vals[i] << std::endl;
+          try {
+            IloNum val = cplex.getValue(addEffectVars[(*ai).second][i]);
+            os << "Add Effect " << (*ai).first << "[" << i << "] = " << val << std::endl;
+          } catch (IloException& e) {
+            os << "Add Effect " << (*ai).first << "[" << i << "] = " << "?" << std::endl;
+          }
         }
       }
       // Iterate through the single dimension of the stepVars array
-      cplex.getValues(vals, stepTimeVars);
-      for (std::map<std::string, int>::const_iterator ai = stepTime.begin();
-           ai != stepTime.end(); ai++) {
-        os << "Step " << (*ai).first << " = 1" << std::endl;
+      //cplex.getValues(vals, stepTimeVars);
+      for (std::map<size_t, IlpAction*>::const_iterator ai =
+             plan_->steps().begin();
+         ai != plan_->steps().end(); ai++) {
+        os << "Step " << (*ai).second->name() << " = 1" << std::endl;
       }
       // Iterate through the single dimension of the stepTimeVars array
-      cplex.getValues(vals, stepTimeVars);
+      //cplex.getValues(vals, stepTimeVars);
       for (std::map<std::string, int>::const_iterator ai = stepTime.begin();
            ai != stepTime.end(); ai++) {
-        os << "Step Time " << (*ai).first << " = " << vals[(*ai).second] << std::endl;
+        try {
+          IloNum val = cplex.getValue(stepTimeVars[(*ai).second]);
+          os << "Step Time " << (*ai).first << " = " << val << std::endl;
+        } catch (IloException& e) {
+          os << "Step Time " << (*ai).first << " = " << "?" << std::endl;
+        }
       }
       // Precondition satisfied and deleted vars
+      std::cout << "Number of steps: " << plan_->steps().size() << std::endl << std::endl;
       for (std::map<size_t, IlpAction*>::const_iterator ai =
              plan_->steps().begin();
          ai != plan_->steps().end(); ai++) {
@@ -1016,48 +1062,69 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
           os << "Satisfied - Deleted = " << totalSat - totalDel << std::endl;
         }
       }
+      std::cout << "Finished step" << std::endl << std::endl;
     }
     if (verbosity >= 1) {
       // Iterate through both dimensions of the actionVars array
       std::map<std::string, int> actionVals;
       for (std::map<std::string, int>::const_iterator ai = action.begin();
            ai != action.end(); ai++) {
-        cplex.getValues(vals, actionVars[(*ai).second]);
+        //cplex.getValues(vals, actionVars[(*ai).second]);
         for (int i = 0; i < actionVars[(*ai).second].getSize(); i++) {
-          actionVals[(*ai).first.substr(3) + '-' + std::to_string(i)] = std::round(vals[i]);
+          try {
+            IloNum val = cplex.getValue(actionVars[(*ai).second][i]);
+            actionVals[(*ai).first.substr(3) + '-' + std::to_string(i)] = std::round(val);
+          } catch (IloException& e) {
+            actionVals[(*ai).first.substr(3) + '-' + std::to_string(i)] = 0;
+          }
         }
       }
       // Iterate through both dimensions of the actionTimeVars array
       std::map<int, std::vector<std::string>> actionTimeVals;
       for (std::map<std::string, int>::const_iterator ai = actionTime.begin();
            ai != actionTime.end(); ai++) {
-        cplex.getValues(vals, actionTimeVars[(*ai).second]);
+        //cplex.getValues(vals, actionTimeVars[(*ai).second]);
         for (int i = 0; i < actionTimeVars[(*ai).second].getSize(); i++) {
           if (actionVals[(*ai).first.substr(3) + '-' + std::to_string(i)] == 1) {
-            actionTimeVals[std::round(vals[i])].push_back((*ai).first.substr(3) + '-' + std::to_string(i));
+            try { 
+              IloNum val = cplex.getValue(actionTimeVars[(*ai).second][i]);
+              actionTimeVals[std::round(val)].push_back((*ai).first.substr(3) + '-' + std::to_string(i));
+            } catch (IloException& e) {
+              actionTimeVals[0].push_back((*ai).first.substr(3) + '-' + std::to_string(i));
+            }
           }
         }
       }
       // Iterate through the single dimension of the stepTimeVars array
-      cplex.getValues(vals, stepTimeVars);
+      //cplex.getValues(vals, stepTimeVars);
       for (std::map<std::string, int>::const_iterator ai = stepTime.begin();
            ai != stepTime.end(); ai++) {
-        // Add val of 1 to actionVals and time to actionTimeVals
-        actionVals["STEP:" + (*ai).first.substr(3)] = 1;
-        actionTimeVals[std::round(vals[(*ai).second])].push_back("STEP:" + (*ai).first.substr(3));
+        try {
+          IloNum val = cplex.getValue(stepTimeVars[(*ai).second]);
+          actionVals["STEP:" + (*ai).first.substr(3)] = std::round(val);
+          actionTimeVals[std::round(val)].push_back("STEP:" + (*ai).first.substr(3));
+        } catch (IloException& e) {
+          actionVals["STEP:" + (*ai).first.substr(3)] = 0;
+          actionTimeVals[0].push_back("STEP:" + (*ai).first.substr(3));
+        }
       }
       // Iterate through the single dimension of the propVars array
       std::map<std::pair<std::string, int>, int> propVals;
       // For each prop and instance, get the value
       for (std::map<std::string, int>::const_iterator ai = prop.begin();
            ai != prop.end(); ai++) {
-        cplex.getValues(vals, propVars[(*ai).second]);
+        //cplex.getValues(vals, propVars[(*ai).second]);
         for (int i = 0; i < propVars[(*ai).second].getSize(); i++) {
           // If (*ai).first contains the substring 'link', then skip
           if ((*ai).first.find("link") != std::string::npos) {
             continue;
           }
-          propVals[std::make_pair((*ai).first.substr(3), i)] = std::round(vals[i]);
+          try {
+            IloNum val = cplex.getValue(propVars[(*ai).second][i]);
+            propVals[std::make_pair((*ai).first.substr(3), i)] = std::round(val);
+          } catch (IloException& e) {
+            propVals[std::make_pair((*ai).first.substr(3), i)] = 0;
+          }
         }
       }
       // Iterate through the single dimension of the propTimeVars array
@@ -1065,10 +1132,15 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       // For each prop and instance, get the time value
       for (std::map<std::string, int>::const_iterator ai = propTime.begin();
            ai != propTime.end(); ai++) {
-        cplex.getValues(vals, propTimeVars[(*ai).second]);
+        //cplex.getValues(vals, propTimeVars[(*ai).second]);
         for (int i = 0; i < propTimeVars[(*ai).second].getSize(); i++) {
           if (propVals[std::make_pair((*ai).first.substr(3), i)] == 1) {
-            propTimeVals[std::round(vals[i])].push_back(std::make_pair((*ai).first.substr(3), i));
+            try {
+              IloNum val = cplex.getValue(propTimeVars[(*ai).second][i]);
+              propTimeVals[std::round(val)].push_back(std::make_pair((*ai).first.substr(3), i));
+            } catch (IloException& e) {
+              propTimeVals[0].push_back(std::make_pair((*ai).first.substr(3), i));
+            }
           }
         }
       }
@@ -1095,8 +1167,8 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     }
 
     env.end();
-    // Return the total number of actions used (including steps)
-    return objectiveValue + plan_->steps().size();
+    // Return the total number of actions used
+    return objectiveValue;
   }
   catch (IloException& e) {
     std::cerr << "CPLEX Concert exception caught: " << e << std::endl;
@@ -1105,7 +1177,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     std::cerr << "Unknown ILP exception caught" << std::endl;
   }
   env.end();
-  return 0;
+  return -2;
 }
 
 void IlpNode::remove_causal_links() {

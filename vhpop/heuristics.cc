@@ -1054,27 +1054,32 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     //os << "Solution length: " << solutionLengthNode << std::endl;
     //os << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
-    //std::ostream& os = std::cout;
-    //const IlpNode ilpNode = IlpNode(problem, plan);
-    ////os << std::endl << std::endl << std::endl << std::endl << std::endl;
-    ////os << ilpNode;
-    //os << std::endl;
-    //// print the node, note that .plan() will only give a reference to the plan
-    ////os << (*ilpNode.plan());
-    //size_t ilpSolutionLength = ilpNode.solve_relaxed(os, 2);
+    std::ostream& os = std::cout;
+    const IlpNode ilpNode = IlpNode(problem, plan);
+    //os << std::endl << std::endl << std::endl << std::endl << std::endl;
+    //os << ilpNode;
+    os << std::endl;
+    // print the node, note that .plan() will only give a reference to the plan
+    //os << (*ilpNode.plan());
+    size_t ilpSolutionLength = ilpNode.solve(os, 1);
+    size_t error_length = -2;
+    size_t infeasible_length = -1;
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
-      //os << "Solution length: " << ilpSolutionLength << std::endl;
-      //if (ilpSolutionLength == 0) {
-      //  os << "Revised solution length: " << (plan.num_steps() + 0.5*(plan.num_open_conds() + plan.num_unsafes())) << std::endl;
-      //  rank.push_back(plan.num_steps()
-      //               + 0.5*(plan.num_open_conds() + plan.num_unsafes()));
-      //} else {
-      //  rank.push_back(ilpSolutionLength);
-      //}
-      rank.push_back(plan.num_steps()
+      os << "Heuristic value: " << ilpSolutionLength << ", Solution length: " << (ilpSolutionLength + plan.num_steps()) << std::endl;
+      if (ilpSolutionLength == error_length) {
+        os << "Revised solution length: " << (plan.num_steps() + 0.5*(plan.num_open_conds() + plan.num_unsafes())) << std::endl;
+        rank.push_back(plan.num_steps()
                      + 0.5*(plan.num_open_conds() + plan.num_unsafes()));
+      } else {
+        if (ilpSolutionLength == infeasible_length) {
+          rank.push_back(std::numeric_limits<float>::infinity());
+        } else {
+          rank.push_back(plan.num_steps() + ilpSolutionLength);
+        }
+      }
+      //rank.push_back(plan.num_steps());
       
       break;
     case LIFO:
