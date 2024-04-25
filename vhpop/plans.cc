@@ -675,6 +675,40 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
       for (PlanList::const_iterator pi = refinements.begin();
            pi != refinements.end(); pi++) {
         const Plan& new_plan = **pi;
+        // Set the minimum delete relaxed actions needed to complete this partial plan
+        new_plan.heuristic_min_.push_back(current_plan->primary_rank() - new_plan.num_steps());
+        // Maximum is same as minimum if no steps have been added, else, they are minimum + delete effects of new step
+        if (current_plan->num_steps() == new_plan.num_steps()) {
+          new_plan.heuristic_max_.push_back(new_plan.heuristic_min_[0]);
+        } else {
+          // Iterate through each step in the current plan Chain<Step> and add the ids to a set
+          std::set<size_t> current_step_ids;
+          for (const Chain<Step>* sc = current_plan->steps(); sc != NULL; sc = sc->tail) {
+            current_step_ids.insert(sc->head.id());
+          }
+          // Iterate through each step in the new plan, and check if it is in current_step_ids
+          // If it is not, then it is a new step and we need to add the delete effects of this step
+          size_t delete_effects = 0;
+          for (const Chain<Step>* sc = new_plan.steps(); sc != NULL; sc = sc->tail) {
+            if (current_step_ids.find(sc->head.id()) == current_step_ids.end()) {
+              // Iterate through the effects of this step's action
+              for (EffectList::const_iterator ei = sc->head.action().effects().begin();
+                   ei != sc->head.action().effects().end(); ei++) {
+                // Get the literal of this effect
+                const Literal& literal = (*ei)->literal();
+                // Check for negation
+                const Negation* negation = dynamic_cast<const Negation*>(&literal);
+                if (negation) {
+                  delete_effects++;
+                }
+              }
+            }
+            break;
+          }
+          // Max is minimum, plus the delete effects of the new step (max of one additional action to add each)
+          new_plan.heuristic_max_.push_back(new_plan.heuristic_min_[0] + delete_effects);
+        }
+
         /* N.B. Must set id before computing rank, because it may be used. */
         new_plan.id_ = num_generated_plans;
         if (new_plan.primary_rank() != std::numeric_limits<float>::infinity()

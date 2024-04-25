@@ -1055,20 +1055,51 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     //os << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
     std::ostream& os = std::cout;
+    // Time the heuristic
+    std::clock_t start;
+    double node_time;
+    start = std::clock();
     const IlpNode ilpNode = IlpNode(problem, plan);
+    node_time = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+    os << "Time to create ILP node: " << node_time << std::endl;
+
     //os << std::endl << std::endl << std::endl << std::endl << std::endl;
     //os << ilpNode;
-    os << std::endl;
+    //os << std::endl;
     // print the node, note that .plan() will only give a reference to the plan
     //os << (*ilpNode.plan());
-    size_t ilpSolutionLength = ilpNode.solve(os, 1);
+    
+    const std::vector<float> heuristic_min = plan.heuristic_min();
+    const std::vector<float> heuristic_max = plan.heuristic_max();
+    size_t heuristic_min_value = 0;
+    // Set to half of the maximum value
+    size_t heuristic_max_value = std::numeric_limits<size_t>::max()/2;
+    if (!heuristic_min.empty() && !heuristic_max.empty()) {
+      heuristic_min_value = static_cast<size_t>(heuristic_min[0]);
+      heuristic_max_value = static_cast<size_t>(heuristic_max[0]);
+    }
+
+    const bool LP_RELAX = false; // TODO: make this a different heuristic name
+    size_t ilpSolutionLength = ilpNode.solve(os, 1, LP_RELAX, heuristic_min_value, heuristic_max_value);
     size_t error_length = -2;
     size_t infeasible_length = -1;
 
     switch (h) {
     case HEUR_3770: /* SCOTT HOWSAM */
       os << "Heuristic value: " << ilpSolutionLength << ", Solution length: " << (ilpSolutionLength + plan.num_steps()) << std::endl;
-      if (ilpSolutionLength == error_length) {
+      os << "Heuristic min: " << heuristic_min_value << ", Heuristic max: " << heuristic_max_value << std::endl;
+      if (ilpSolutionLength < heuristic_min_value) {
+        if (LP_RELAX) { // TODO fix up this if statement
+          ilpSolutionLength = heuristic_min_value;
+        } else {
+          os << "Heuristic value out of bounds" << std::endl;
+          std::this_thread::sleep_for(std::chrono::seconds(999));
+        }
+      }
+      if (ilpSolutionLength > heuristic_max_value) {
+        os << "Pruning this branch for inefficiency" << std::endl;
+        rank.push_back(std::numeric_limits<float>::infinity());
+      } else if (ilpSolutionLength == error_length) {
         os << "Revised solution length: " << (plan.num_steps() + 0.5*(plan.num_open_conds() + plan.num_unsafes())) << std::endl;
         rank.push_back(plan.num_steps()
                      + 0.5*(plan.num_open_conds() + plan.num_unsafes()));

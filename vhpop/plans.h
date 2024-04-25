@@ -179,6 +179,12 @@ struct Plan {
      signifies a better plan. */
   float primary_rank() const;
 
+  /* Returns the heuristic min of this plan. */
+  const std::vector<float> heuristic_min() const { return heuristic_min_; };
+
+  /* Returns the heuristic max of this plan. */
+  const std::vector<float> heuristic_max() const { return heuristic_max_; };
+
   /* Returns the serial number of this plan. */
   size_t serial_no() const;
 
@@ -247,6 +253,10 @@ private:
   const Chain<MutexThreat>* mutex_threats_;
   /* Rank of this plan. */
   mutable std::vector<float> rank_;
+  /* Minimum possible value of the delete relaxation. */
+  mutable std::vector<float> heuristic_min_;
+  /* Maximum possible value of the delete relaxation. */
+  mutable std::vector<float> heuristic_max_;
   /* Plan id (serial number). */
   mutable size_t id_;
 #ifdef DEBUG

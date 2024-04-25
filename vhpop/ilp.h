@@ -11,8 +11,6 @@
 #include <set>
 #include <string>
 
-void example_ILP();
-
 /*
  * ILP Action definition.
  */
@@ -222,7 +220,7 @@ struct IlpNode {
     IlpPlan* plan() const { return plan_; }
   
     /* Finds the shortest solution length of the problem from this node with an ILP by adding delete relaxed problem actions */
-    const size_t solve(std::ostream& os, short int verbosity = 0) const;
+    const size_t solve(std::ostream& os, short int verbosity = 0, bool lp_relax = false, size_t lb = 0, size_t ub = -1) const;
 
   private:
     /* Node id (serial number). */

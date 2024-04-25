@@ -590,7 +590,12 @@ IlpNode::~IlpNode() {
   delete plan_;
 }
 
-const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
+const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax, size_t lb, size_t ub) const {
+  std::clock_t start;
+  double model_time;
+  double solve_time;
+  double rtn_time;
+  start = std::clock();
   IloEnv env;
   try {
     IloModel model(env);  
@@ -613,12 +618,6 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
   
     IloEnv env = model.getEnv();  
 
-    // Get the set of goal and init propositions from the problem, and setminus them
-    std::set<std::string> goal = problem_->goal();
-    std::set<std::string> init = problem_->init();
-    std::set<std::string> goalMinusInit;
-    std::set_difference(init.begin(), init.end(), goal.begin(), goal.end(), std::inserter(goalMinusInit, goalMinusInit.begin()));
-
     // Set prop instances to 1 for each prop initially
     std::map<std::string, int> propInstances;
     for (std::set<std::string>::const_iterator ai = problem_->props().begin();
@@ -639,8 +638,16 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       }
     }
 
-    // Upper bound of $|G\setminus I|+|del_P|+|P|$
-    int upperBound = goalMinusInit.size() + planDelEffects + plan_->steps().size();
+    
+    size_t upperBound = ub + plan_->steps().size();
+    size_t num_actions = problem_->actions().size();
+    size_t num_props = problem_->props().size();
+    // Use upper bound of $min(|A|,|p|)+|del_P|+|P|$ is none is provided
+    if (upperBound > std::min(num_actions, num_props) + planDelEffects + num_props) {
+      upperBound = std::min(num_actions, num_props) + planDelEffects + num_props;
+      ub = upperBound - plan_->steps().size();
+    }
+    
     const size_t M = upperBound + 2; // + 2 to avoid issues where we are comparing times with a difference of 1
     if (verbosity >= 2) {
       os << "Upper bound: " << upperBound << std::endl;
@@ -650,11 +657,21 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     // Create the prop and propTime variables
     for (std::set<std::string>::const_iterator ai = problem_->props().begin();
          ai != problem_->props().end(); ai++) {
-      IloNumVarArray propVar(env, propInstances[(*ai)], 0, 1, IloNumVar::Bool);
-      propVars.add(propVar);
+      if (lp_relax) {
+        IloNumVarArray propVar(env, propInstances[(*ai)], 0, 1, IloNumVar::Float);
+        propVars.add(propVar);
+      } else {
+        IloNumVarArray propVar(env, propInstances[(*ai)], 0, 1, IloNumVar::Bool);
+        propVars.add(propVar);
+      }
       prop[("PA-" + (*ai)).c_str()] = propVars.getSize() - 1;
-      IloNumVarArray propTimeVar(env, propInstances[(*ai)], 0, upperBound, IloNumVar::Int);
-      propTimeVars.add(propTimeVar);
+      if (lp_relax) {
+        IloNumVarArray propTimeVar(env, propInstances[(*ai)], 0, upperBound, IloNumVar::Float);
+        propTimeVars.add(propTimeVar);
+      } else {
+        IloNumVarArray propTimeVar(env, propInstances[(*ai)], 0, upperBound, IloNumVar::Int);
+        propTimeVars.add(propTimeVar);
+      }
       propTime[("PT-" + (*ai)).c_str()] = propTimeVars.getSize() - 1;
     }
 
@@ -662,14 +679,24 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     for (std::map<size_t, IlpAction*>::const_iterator ai =
              plan_->steps().begin();
          ai != plan_->steps().end(); ai++) {
-      IloNumVar stepTimeVar(env, 0, upperBound, IloNumVar::Int);
-      stepTimeVars.add(stepTimeVar);
+      if (lp_relax) {
+        IloNumVar stepTimeVar(env, 0, upperBound, IloNumVar::Float);
+        stepTimeVars.add(stepTimeVar);
+      } else {
+        IloNumVar stepTimeVar(env, 0, upperBound, IloNumVar::Int);
+        stepTimeVars.add(stepTimeVar);
+      }
       stepTime[("ST-" + (*ai).second->name()).c_str()] = stepTimeVars.getSize() - 1;
       for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
            ei != (*ai).second->pos_effects().end(); ei++) {
         // Only one instance of each plan step, so only one add effect variable
-        IloNumVarArray addEffectVar(env, 1, 0, 1, IloNumVar::Bool);
-        addEffectVars.add(addEffectVar);
+        if (lp_relax) {
+          IloNumVarArray addEffectVar(env, 1, 0, 1, IloNumVar::Float);
+          addEffectVars.add(addEffectVar);
+        } else {
+          IloNumVarArray addEffectVar(env, 1, 0, 1, IloNumVar::Bool);
+          addEffectVars.add(addEffectVar);
+        }
         addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()] = addEffectVars.getSize() - 1;
       }
     }
@@ -684,16 +711,31 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
            ei != (*ai).second->pos_effects().end(); ei++) {
         actionInstances += propInstances[(*ei)] - 1;
       }
-      IloNumVarArray actionVar(env, actionInstances, 0, 1, IloNumVar::Bool);
-      actionVars.add(actionVar);
+      if (lp_relax) {
+        IloNumVarArray actionVar(env, actionInstances, 0, 1, IloNumVar::Float);
+        actionVars.add(actionVar);
+      } else {
+        IloNumVarArray actionVar(env, actionInstances, 0, 1, IloNumVar::Bool);
+        actionVars.add(actionVar);
+      }
       action[("AU-" + (*ai).first).c_str()] = actionVars.getSize() - 1;
-      IloNumVarArray actionTimeVar(env, actionInstances, 0, upperBound, IloNumVar::Int);
-      actionTimeVars.add(actionTimeVar);
+      if (lp_relax) {
+        IloNumVarArray actionTimeVar(env, actionInstances, 0, upperBound, IloNumVar::Float);
+        actionTimeVars.add(actionTimeVar);
+      } else {
+        IloNumVarArray actionTimeVar(env, actionInstances, 0, upperBound, IloNumVar::Int);
+        actionTimeVars.add(actionTimeVar);
+      }
       actionTime[("AT-" + (*ai).first).c_str()] = actionTimeVars.getSize() - 1;
       for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
            ei != (*ai).second->pos_effects().end(); ei++) {
-        IloNumVarArray addEffectVar(env, actionInstances, 0, 1, IloNumVar::Bool);
-        addEffectVars.add(addEffectVar);
+        if (lp_relax) {
+          IloNumVarArray addEffectVar(env, actionInstances, 0, 1, IloNumVar::Float);
+          addEffectVars.add(addEffectVar);
+        } else {
+          IloNumVarArray addEffectVar(env, actionInstances, 0, 1, IloNumVar::Bool);
+          addEffectVars.add(addEffectVar);
+        }
         addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()] = addEffectVars.getSize() - 1;
       }
     } 
@@ -704,6 +746,15 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
       actionUsage += IloSum(actionVars[i]);
     }
     model.add(IloMinimize(env, actionUsage));
+
+    // Set the minimum number of actions to be used
+    os << "Lower bound: " << lb << std::endl;
+    model.add(actionUsage >= static_cast<IloNum>(lb));
+
+    // Set the maximum number of actions to be used
+    os << "Upper bound: " << ub << std::endl;
+    model.add(actionUsage <= static_cast<IloNum>(ub));
+    
 
     // Constraint set 1: The goals must be achieved
     for (std::set<std::string>::const_iterator ai = problem_->goal().begin();
@@ -801,11 +852,19 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
           // Get the number of instances of the precondition that are satisfied before the action
           IloNumVarArray preconditionSatisfied(env);
           for (int j = 0; j < propVars[prop[("PA-" + (*ci)).c_str()]].getSize(); j++) {
-            IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Bool);
-            model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*ci)).c_str()]][j] 
-                                          - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
-                                          + M * (1 - propVars[prop[("PA-" + (*ci)).c_str()]][j]) <= 0));
-            preconditionSatisfied.add(instanceSatisfied);
+            if (lp_relax) {
+              IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Float);
+              model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*ci)).c_str()]][j] 
+                                            - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
+                                            + M * (1 - propVars[prop[("PA-" + (*ci)).c_str()]][j]) <= 0));
+              preconditionSatisfied.add(instanceSatisfied);
+            } else {
+              IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Bool);
+              model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*ci)).c_str()]][j] 
+                                            - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] 
+                                            + M * (1 - propVars[prop[("PA-" + (*ci)).c_str()]][j]) <= 0));
+              preconditionSatisfied.add(instanceSatisfied);
+            }
           }
           preconditionSatisfiedVars.add(preconditionSatisfied);
           // Get the number of steps which delete the precondition that occur before the action
@@ -814,10 +873,17 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
                    plan_->steps().begin();
                si != plan_->steps().end(); si++) {
             if ((*si).second->neg_effects().count(*ci) > 0) {
-              IloNumVar instanceDeleted(env, 0, 1, IloNumVar::Bool);
-              model.add(instanceDeleted == (stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] 
-                                          - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] < 0));
-              preconditionDeleted.add(instanceDeleted);
+              if (lp_relax) {
+                IloNumVar instanceDeleted(env, 0, 1, IloNumVar::Float);
+                model.add(instanceDeleted == (stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] 
+                                            - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] + 1 <= 0));
+                preconditionDeleted.add(instanceDeleted);
+              } else {
+                IloNumVar instanceDeleted(env, 0, 1, IloNumVar::Bool);
+                model.add(instanceDeleted == (stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] 
+                                            - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] + 1 <= 0));
+                preconditionDeleted.add(instanceDeleted);
+              }
             }
           }
           // The precondition must be satisfied more than it is deleted
@@ -836,11 +902,19 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
         // Get the number of instances of the precondition that are satisfied before the action
         IloNumVarArray preconditionSatisfied(env);
         for (int j = 0; j < propVars[prop[("PA-" + (*ci)).c_str()]].getSize(); j++) {
-          IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Bool);
-          model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*ci)).c_str()]][j] 
-                                        - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] 
-                                        + M * (1 - propVars[prop[("PA-" + (*ci)).c_str()]][j]) <= 0));
-          preconditionSatisfied.add(instanceSatisfied);
+          if (lp_relax) {
+            IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Float);
+            model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*ci)).c_str()]][j] 
+                                          - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] 
+                                          + M * (1 - propVars[prop[("PA-" + (*ci)).c_str()]][j]) <= 0));
+            preconditionSatisfied.add(instanceSatisfied);
+          } else {
+            IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Bool);
+            model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*ci)).c_str()]][j] 
+                                          - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] 
+                                          + M * (1 - propVars[prop[("PA-" + (*ci)).c_str()]][j]) <= 0));
+            preconditionSatisfied.add(instanceSatisfied);
+          }
         }
         preconditionSatisfiedVars.add(preconditionSatisfied);
         preconditionSatisfiedMap[std::make_pair((*ai).second->name(), (*ci))] = preconditionSatisfiedVars.getSize() - 1;
@@ -854,16 +928,23 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
             continue;
           }
           if ((*si).second->neg_effects().count(*ci) > 0) {
-            IloNumVar instanceDeleted(env, 0, 1, IloNumVar::Bool);
-            model.add(instanceDeleted == (stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] 
-                                        - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] <= 0));
-            preconditionDeleted.add(instanceDeleted);
+            if (lp_relax) {
+              IloNumVar instanceDeleted(env, 0, 1, IloNumVar::Float);
+              model.add(instanceDeleted == (stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] 
+                                          - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] <= 0));
+              preconditionDeleted.add(instanceDeleted);
+            } else {
+              IloNumVar instanceDeleted(env, 0, 1, IloNumVar::Bool);
+              model.add(instanceDeleted == (stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] 
+                                          - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] <= 0));
+              preconditionDeleted.add(instanceDeleted);
+            }
           }
         }
         preconditionDeletedVars.add(preconditionDeleted);
         preconditionDeletedMap[std::make_pair((*ai).second->name(), (*ci))] = preconditionDeletedVars.getSize() - 1;
         // The precondition must be satisfied more than it is deleted
-        model.add(IloSum(preconditionSatisfied) - IloSum(preconditionDeleted) > 0);
+        model.add(IloSum(preconditionSatisfied) - IloSum(preconditionDeleted) >= 1);
       }
     }
 
@@ -885,11 +966,19 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
              ai != problem_->actions().end(); ai++) {
           if ((*ai).second->pos_effects().count(*pi) > 0) {
             for (int j = 0; j < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); j++) {
-              IloNumVar instanceAchieved(env, 0, 1, IloNumVar::Bool);
-              model.add(instanceAchieved == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
-                                          - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][j]  
-                                          - M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]][j]) > 0));
-              propAchieved.add(instanceAchieved);
+              if (lp_relax) {
+                IloNumVar instanceAchieved(env, 0, 1, IloNumVar::Float);
+                model.add(instanceAchieved == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
+                                            - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][j]  
+                                            - M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]][j]) >= 1));
+                propAchieved.add(instanceAchieved);
+              } else {
+                IloNumVar instanceAchieved(env, 0, 1, IloNumVar::Bool);
+                model.add(instanceAchieved == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
+                                            - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][j]  
+                                            - M * (1 - addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]][j]) >= 1));
+                propAchieved.add(instanceAchieved);
+              }
             }
           }
         }
@@ -897,11 +986,19 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
                  plan_->steps().begin();
              ai != plan_->steps().end(); ai++) {
           if ((*ai).second->pos_effects().count(*pi) > 0) {
-            IloNumVar instanceAchieved(env, 0, 1, IloNumVar::Bool);
-            model.add(instanceAchieved == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
-                                        - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]]
-                                        - M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]][0]) > 0));
-            propAchieved.add(instanceAchieved);
+            if (lp_relax) {
+              IloNumVar instanceAchieved(env, 0, 1, IloNumVar::Float);
+              model.add(instanceAchieved == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
+                                          - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]]
+                                          - M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]][0]) >= 1));
+              propAchieved.add(instanceAchieved);
+            } else {
+              IloNumVar instanceAchieved(env, 0, 1, IloNumVar::Bool);
+              model.add(instanceAchieved == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i]
+                                          - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]]
+                                          - M * (1 - addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]][0]) >= 1));
+              propAchieved.add(instanceAchieved);
+            }
           }
         }
         // Sum the number of instances of the prop that are satisfied before or at the same time as this instance
@@ -912,13 +1009,20 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
             continue;
           }
           // Else, instanceSatisifed is 1 if the prop is satisfied before or at the same time as this instance
-          IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Bool);
-          model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][j] 
-                                      - propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i] <= 0));
-          propSatisfied.add(instanceSatisfied);
+          if (lp_relax) {
+            IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Float);
+            model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][j] 
+                                        - propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i] <= 0));
+            propSatisfied.add(instanceSatisfied);
+          } else {
+            IloNumVar instanceSatisfied(env, 0, 1, IloNumVar::Bool);
+            model.add(instanceSatisfied == (propTimeVars[propTime[("PT-" + (*pi)).c_str()]][j] 
+                                        - propTimeVars[propTime[("PT-" + (*pi)).c_str()]][i] <= 0));
+            propSatisfied.add(instanceSatisfied);
+          }
         }
         // Prop must be not satisfied, or have more achievers than satisfied instances
-        IloConstraint propHasAchiever = IloSum(propAchieved) - IloSum(propSatisfied) + M * (1 - propVars[prop[("PA-" + (*pi)).c_str()]][i]) > 0;
+        IloConstraint propHasAchiever = IloSum(propAchieved) - IloSum(propSatisfied) + M * (1 - propVars[prop[("PA-" + (*pi)).c_str()]][i]) >= 1;
         model.add(propHasAchiever);
         propHasAchiever.setName(("C6-P_" + (*pi) + "-" + std::to_string(i)).c_str());
       }
@@ -928,19 +1032,62 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
     for (std::map<size_t, size_t>::const_iterator oi = plan_->orderings().begin();
          oi != plan_->orderings().end(); oi++) {
       IloConstraint c7 = stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).first)->name()).c_str()]] 
-                       - stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).second)->name()).c_str()]] < 0;
+                       - stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).second)->name()).c_str()]] + 1 <= 0;
       model.add(c7);
       c7.setName(("C7-S_" + plan_->steps().at((*oi).first)->name() + "-S_" + plan_->steps().at((*oi).second)->name()).c_str());
     }
 
-    // Constraint set 9: Mutex constraints (needed if step ordering constraints aren' required to break all mutex possibilities)
+    // Constraint set 9: Mutex constraints: Note that only an interference constraint is required (TODO: see if required by checking nodes explored)
+    //for (std::map<size_t, IlpAction*>::const_iterator ai =
+    //         plan_->steps().begin();
+    //     ai != plan_->steps().end(); ai++) {
+    //  for (std::map<size_t, IlpAction*>::const_iterator bi =
+    //           plan_->steps().begin();
+    //       bi != plan_->steps().end(); bi++) {
+    //    if (ai == bi) {
+    //      continue;
+    //    }
+    //    // For each precondition of ai, and each delete effect of bi
+    //    bool interference = false;
+    //    for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
+    //         ci != (*ai).second->conditions().end(); ci++) {
+    //      for (std::set<std::string>::const_iterator di = (*bi).second->neg_effects().begin();
+    //           di != (*bi).second->neg_effects().end(); di++) {
+    //        // If the precondition of ai is the delete effect of bi, then add a constraint
+    //        if ((*ci) == (*di)) {
+    //          interference = true;
+    //          IloConstraint c9 = (stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*bi).second->name()).c_str()]] != 0);
+    //          model.add(c9);
+    //          c9.setName(("C9-S_" + (*ai).second->name() + "-S_" + (*bi).second->name()).c_str());
+    //          os << "Mutex constraint: " << (*ai).second->name() << " and " << (*bi).second->name() << std::endl;
+    //          break;
+    //        }
+    //      }
+    //      if (interference) {
+    //        break;
+    //      }
+    //    }
+    //  }
+    //}
 
 
     IloCplex cplex(model);
     if (verbosity < 2) cplex.setOut(env.getNullStream());
 
+    // Timer
+    model_time = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+    os << "Model time: " << model_time << std::endl;
+    start = std::clock();
+
+    // Set the lower limit of objective function parameter CPX_PARAM_OBJLLIM to lb
+    cplex.setParam(IloCplex::Param::MIP::Limits::LowerObjStop, lb);
+
     // Optimize the problem and obtain solution.
     cplex.solve();
+    solve_time = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+    os << "Solve time: " << solve_time << std::endl;
+    os << "Model time as percent of solve time: " << (model_time / solve_time) * 100 << "%" << std::endl;
+    start = std::clock();
 
     if (cplex.getStatus() == IloAlgorithm::Infeasible) {
         env.end();
@@ -1147,7 +1294,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
 
       // Print the sorted actions and props
       os << "INIT" << std::endl;
-      for (int i = 0; i <= upperBound; i++) {
+      for (size_t i = 0; i <= upperBound; i++) {
         if (propTimeVals.count(i) > 0) {
           os << i << ": ";
           for (std::pair<std::string, int> prop : propTimeVals[i]) {
@@ -1168,6 +1315,8 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity) const {
 
     env.end();
     // Return the total number of actions used
+    rtn_time = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+    os << "Return time: " << rtn_time << std::endl;
     return objectiveValue;
   }
   catch (IloException& e) {
