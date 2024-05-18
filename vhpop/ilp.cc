@@ -163,6 +163,58 @@ IlpProblem::IlpProblem(const Problem& problem)
   }
 }
 
+IlpProblem::IlpProblem(const Problem& problem, std::map<std::string, Predicate> new_predicates, std::map<std::string, const ActionSchema *> new_actions)
+    : name_(problem.name()) {
+  // Add the initial atoms
+  AtomSet init_atoms = problem.init_atoms();
+  for (AtomSet::const_iterator ai = init_atoms.begin();
+       ai != init_atoms.end(); ai++) {
+    add_init_prop(PredicateTable::name((*ai)->predicate()));
+  }
+
+  // Add the goal atoms
+  const Formula& goal_formula = problem.goal();
+  const Conjunction* goal_conjunctions = dynamic_cast<const Conjunction*>(&goal_formula);
+  if (goal_conjunctions) {
+    // Access conjuncts_ directly as member variable
+    for (FormulaList::const_iterator it = goal_conjunctions->conjuncts().begin();
+         it != goal_conjunctions->conjuncts().end(); ++it) {
+      const Formula* conjunct = *it;
+      // Get the atom
+      const Atom* atom = dynamic_cast<const Atom*>(conjunct);
+      if (atom) {
+        add_goal_prop(PredicateTable::name((*atom).predicate()));
+      } else {
+        std::cout << "Not an atom ERROR" << std::endl;
+        continue; // Not an atom
+      }
+    }
+  } else {
+    // Check if the goal is an atom
+    const Atom* atom = dynamic_cast<const Atom*>(&goal_formula);
+    if (atom) {
+      add_goal_prop(PredicateTable::name((*atom).predicate()));
+    } else {
+      std::cout << "Not a conjunction ERROR" << std::endl;
+      return; // Not a conjunction
+    }
+  }
+
+  // Add the propositions
+  for (std::map<std::string, Predicate>::const_iterator ai =
+           new_predicates.begin();
+       ai != new_predicates.end(); ai++) {
+    add_prop((*ai).first);
+  }
+
+  // Add the actions
+  for (std::map<std::string, const ActionSchema*>::const_iterator ai =
+             new_actions.begin();
+         ai != new_actions.end(); ai++) {
+    add_action(new IlpAction(*(*ai).second));
+  }
+}
+
 IlpProblem::~IlpProblem() { 
   // Delete all created action pointers
   for (std::map<std::string, IlpAction*>::const_iterator ai =
@@ -577,6 +629,13 @@ IlpNode::IlpNode(const Problem& problem, const Plan& plan)
   remove_causal_links();
 }
 
+IlpNode::IlpNode(const Problem& problem, const Plan& plan, std::map<std::string, Predicate> new_predicates, std::map<std::string, const ActionSchema *> new_actions)
+    : id_(plan.serial_no()) {
+  problem_ = new IlpProblem(problem, new_predicates, new_actions);
+  plan_ = new IlpPlan(plan);
+  remove_causal_links();
+}
+
 IlpNode::IlpNode(IlpProblem* problem, IlpPlan* plan)
     : id_(plan->serial_no()) {
   problem_ = problem;
@@ -590,7 +649,8 @@ IlpNode::~IlpNode() {
   delete plan_;
 }
 
-const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax, size_t lb, size_t ub) const {
+const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax, size_t lb, size_t ub, size_t seconds) const {
+  os << "SECONDS: " << seconds << std::endl;
   std::clock_t start;
   double model_time;
   double solve_time;
@@ -642,7 +702,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax
     size_t upperBound = ub + plan_->steps().size();
     size_t num_actions = problem_->actions().size();
     size_t num_props = problem_->props().size();
-    // Use upper bound of $min(|A|,|p|)+|del_P|+|P|$ is none is provided
+    // Use upper bound of $min(|A|,|p|)+|del_P|+|P|$ is none is provided TODO use planning graph 
     if (upperBound > std::min(num_actions, num_props) + planDelEffects + num_props) {
       upperBound = std::min(num_actions, num_props) + planDelEffects + num_props;
       ub = upperBound - plan_->steps().size();
@@ -774,29 +834,29 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax
     }
 
     // Constraint set 2: Actions require their preconditions
-    for (std::map<std::string, IlpAction*>::const_iterator ai =
-             problem_->actions().begin();
-         ai != problem_->actions().end(); ai++) {
-      for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
-           ci != (*ai).second->conditions().end(); ci++) {
-        // For each instance of the action, sum of propVars for each precondition must be greater than or equal to the actionVar
-        for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
-          IloConstraint c2 = IloSum(propVars[prop[("PA-" + (*ci)).c_str()]]) >= actionVars[action[("AU-" + (*ai).first).c_str()]][i];
-          model.add(c2);
-          c2.setName(("C2-A_" + (*ai).first + "-P_" + (*ci)).c_str());
-        }
-      }
-    }
-    for (std::map<size_t, IlpAction*>::const_iterator ai =
-             plan_->steps().begin();
-         ai != plan_->steps().end(); ai++) {
-      for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
-           ci != (*ai).second->conditions().end(); ci++) {
-        IloConstraint c2 = IloSum(propVars[prop[("PA-" + (*ci)).c_str()]]) >= 1;
-        model.add(c2);
-        c2.setName(("C2-S_" + (*ai).second->name() + "-P_" + (*ci)).c_str());
-      }
-    }
+    //for (std::map<std::string, IlpAction*>::const_iterator ai =
+    //         problem_->actions().begin();
+    //     ai != problem_->actions().end(); ai++) {
+    //  for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
+    //       ci != (*ai).second->conditions().end(); ci++) {
+    //    // For each instance of the action, sum of propVars for each precondition must be greater than or equal to the actionVar
+    //    for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
+    //      IloConstraint c2 = IloSum(propVars[prop[("PA-" + (*ci)).c_str()]]) >= actionVars[action[("AU-" + (*ai).first).c_str()]][i];
+    //      model.add(c2);
+    //      c2.setName(("C2-A_" + (*ai).first + "-P_" + (*ci)).c_str());
+    //    }
+    //  }
+    //}
+    //for (std::map<size_t, IlpAction*>::const_iterator ai =
+    //         plan_->steps().begin();
+    //     ai != plan_->steps().end(); ai++) {
+    //  for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
+    //       ci != (*ai).second->conditions().end(); ci++) {
+    //    IloConstraint c2 = IloSum(propVars[prop[("PA-" + (*ci)).c_str()]]) >= 1;
+    //    model.add(c2);
+    //    c2.setName(("C2-S_" + (*ai).second->name() + "-P_" + (*ci)).c_str());
+    //  }
+    //}
 
     // Constraint set 3: An action can be the first achiever only if it is used
     for (std::map<std::string, IlpAction*>::const_iterator ai =
@@ -813,30 +873,30 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax
     }
 
     // Constraint set 4: If a proposition is achieved, it must be true in the initial state or be the effect of some action
-    for (std::set<std::string>::const_iterator pi = problem_->props().begin();
-         pi != problem_->props().end(); pi++) {
-      // Create an expression for the sum of add effects
-      IloNumVarArray propAddEffects(env);
-      for (std::map<std::string, IlpAction*>::const_iterator ai =
-               problem_->actions().begin();
-           ai != problem_->actions().end(); ai++) {
-        if ((*ai).second->pos_effects().count(*pi) > 0) {
-          for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
-            propAddEffects.add(addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]][i]);
-          }
-        }
-      }
-      for (std::map<size_t, IlpAction*>::const_iterator ai =
-               plan_->steps().begin();
-           ai != plan_->steps().end(); ai++) {
-        if ((*ai).second->pos_effects().count(*pi) > 0) {
-          propAddEffects.add(addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]][0]);
-        }
-      }
-      IloConstraint c4 = IloSum(propVars[prop[("PA-" + (*pi)).c_str()]]) <= problem_->init().count(*pi) + IloSum(propAddEffects);
-      model.add(c4);
-      c4.setName(("C4-" + (*pi)).c_str());
-    }
+    //for (std::set<std::string>::const_iterator pi = problem_->props().begin();
+    //     pi != problem_->props().end(); pi++) {
+    //  // Create an expression for the sum of add effects
+    //  IloNumVarArray propAddEffects(env);
+    //  for (std::map<std::string, IlpAction*>::const_iterator ai =
+    //           problem_->actions().begin();
+    //       ai != problem_->actions().end(); ai++) {
+    //    if ((*ai).second->pos_effects().count(*pi) > 0) {
+    //      for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
+    //        propAddEffects.add(addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*pi)).c_str()]][i]);
+    //      }
+    //    }
+    //  }
+    //  for (std::map<size_t, IlpAction*>::const_iterator ai =
+    //           plan_->steps().begin();
+    //       ai != plan_->steps().end(); ai++) {
+    //    if ((*ai).second->pos_effects().count(*pi) > 0) {
+    //      propAddEffects.add(addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*pi)).c_str()]][0]);
+    //    }
+    //  }
+    //  IloConstraint c4 = IloSum(propVars[prop[("PA-" + (*pi)).c_str()]]) <= problem_->init().count(*pi) + IloSum(propAddEffects);
+    //  model.add(c4);
+    //  c4.setName(("C4-" + (*pi)).c_str());
+    //}
 
     // Constraint set 5: Actions must be preceded by the satisfaction of their preconditions
     std::map<std::pair<std::string, std::string>, int> preconditionSatisfiedMap;
@@ -1028,7 +1088,179 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax
       }
     }
 
-    // Constraint set 7: Step ordering constraints TODO this should avoid mutex because ordering constraints are used to avoid mutex 
+    // Constraint set 6.5: Achievers can only achieve false props
+    for (std::map<std::string, IlpAction*>::const_iterator ai =
+             problem_->actions().begin();
+         ai != problem_->actions().end(); ai++) {
+      for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
+           ei != (*ai).second->pos_effects().end(); ei++) {
+        for (int i = 0; i < actionVars[action[("AU-" + (*ai).first).c_str()]].getSize(); i++) {
+          // For each other action effect which affects the same prop
+          for (std::map<std::string, IlpAction*>::const_iterator bi =
+                   problem_->actions().begin();
+               bi != problem_->actions().end(); bi++) {
+            for (std::set<std::string>::const_iterator fi = (*bi).second->pos_effects().begin();
+                 fi != (*bi).second->pos_effects().end(); fi++) {
+              if ((*fi) == (*ei)) {
+                for (int j = 0; j < actionVars[action[("AU-" + (*bi).first).c_str()]].getSize(); j++) {
+                  if (i != j) {
+                    IloOr orConstraint(env);
+                    // If either action effect is not true
+                    orConstraint.add(addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i] == 0);
+                    orConstraint.add(addEffectVars[addEffect[("AE-" + (*bi).first + "->" + (*fi)).c_str()]][j] == 0);
+                    // If the action time of bi > ai
+                    orConstraint.add(actionTimeVars[actionTime[("AT-" + (*bi).first).c_str()]][j] - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] >= 1);
+                    // For each step which deletes the prop
+                    for (std::map<size_t, IlpAction*>::const_iterator si =
+                             plan_->steps().begin();
+                         si != plan_->steps().end(); si++) {
+                      if ((*si).second->neg_effects().count(*ei) > 0) {
+                        IloAnd andConstraint(env);
+                        // si > bi and ai > si
+                        andConstraint.add(stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] - actionTimeVars[actionTime[("AT-" + (*bi).first).c_str()]][j] >= 1);
+                        andConstraint.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] - stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] >= 1);
+                        orConstraint.add(andConstraint);
+                      }
+                    }
+                    
+                  }
+                }
+              }
+              
+            }
+          }
+          // For each step add effect which affects the same prop
+          for (std::map<size_t, IlpAction*>::const_iterator si =
+                   plan_->steps().begin();
+               si != plan_->steps().end(); si++) {
+              for (std::set<std::string>::const_iterator fi = (*si).second->pos_effects().begin();
+                   fi != (*si).second->pos_effects().end(); fi++) {
+                if ((*fi) == (*ei)) {
+                  IloOr orConstraint(env);
+                  // If either action effect is not true
+                  orConstraint.add(addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i] == 0);
+                  orConstraint.add(addEffectVars[addEffect[("SE-" + (*si).second->name() + "->" + (*fi)).c_str()]][0] == 0);
+                  // If the action time of si > ai
+                  orConstraint.add(stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] - actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] >= 1);
+                  // For each step which deletes the prop
+                  for (std::map<size_t, IlpAction*>::const_iterator ti =
+                           plan_->steps().begin();
+                       ti != plan_->steps().end(); ti++) {
+                    if ((*ti).second->neg_effects().count(*ei) > 0) {
+                      IloAnd andConstraint(env);
+                      // ti > si and ai > ti
+                      andConstraint.add(stepTimeVars[stepTime[("ST-" + (*ti).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] >= 1);
+                      andConstraint.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] - stepTimeVars[stepTime[("ST-" + (*ti).second->name()).c_str()]] >= 1);
+                      orConstraint.add(andConstraint);
+                    }
+                  }
+                }
+              }
+          }
+          // If the prop is an init prop
+          if (problem_->init().count(*ei) > 0) {
+            IloOr orConstraint(env);
+            // If the action effect is not true
+            orConstraint.add(addEffectVars[addEffect[("AE-" + (*ai).first + "->" + (*ei)).c_str()]][i] == 0);
+            // For each step which deletes the prop
+            for (std::map<size_t, IlpAction*>::const_iterator si =
+                     plan_->steps().begin();
+                 si != plan_->steps().end(); si++) {
+              if ((*si).second->neg_effects().count(*ei) > 0) {
+                // ai > si
+                orConstraint.add(actionTimeVars[actionTime[("AT-" + (*ai).first).c_str()]][i] - stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] >= 1);
+              }
+            }
+          }
+        }
+      }
+    }
+    for (std::map<size_t, IlpAction*>::const_iterator ai =
+             plan_->steps().begin();
+         ai != plan_->steps().end(); ai++) {
+      for (std::set<std::string>::const_iterator ei = (*ai).second->pos_effects().begin();
+           ei != (*ai).second->pos_effects().end(); ei++) {
+        // For each action effect which affects the same prop
+        for (std::map<std::string, IlpAction*>::const_iterator bi =
+                 problem_->actions().begin();
+             bi != problem_->actions().end(); bi++) {
+          for (std::set<std::string>::const_iterator fi = (*bi).second->pos_effects().begin();
+               fi != (*bi).second->pos_effects().end(); fi++) {
+            if ((*fi) == (*ei)) {
+              for (int j = 0; j < actionVars[action[("AU-" + (*bi).first).c_str()]].getSize(); j++) {
+                IloOr orConstraint(env);
+                // If either action effect is not true
+                orConstraint.add(addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0] == 0);
+                orConstraint.add(addEffectVars[addEffect[("AE-" + (*bi).first + "->" + (*fi)).c_str()]][j] == 0);
+                // If the action time of bi > ai
+                orConstraint.add(actionTimeVars[actionTime[("AT-" + (*bi).first).c_str()]][j] - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] >= 1);
+                // For each step which deletes the prop
+                for (std::map<size_t, IlpAction*>::const_iterator si =
+                         plan_->steps().begin();
+                     si != plan_->steps().end(); si++) {
+                  if ((*si).second->neg_effects().count(*ei) > 0) {
+                    IloAnd andConstraint(env);
+                    // si > bi and ai > si
+                    andConstraint.add(stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] - actionTimeVars[actionTime[("AT-" + (*bi).first).c_str()]][j] >= 1);
+                    andConstraint.add(stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] >= 1);
+                    orConstraint.add(andConstraint);
+                  }
+                }
+              }
+            }
+          }
+        }
+        // For each step add effect which affects the same prop
+        for (std::map<size_t, IlpAction*>::const_iterator si =
+                 plan_->steps().begin();
+             si != plan_->steps().end(); si++) {
+          if ((*si).second->name() == (*ai).second->name()) {
+            continue;
+          }
+          for (std::set<std::string>::const_iterator fi = (*si).second->pos_effects().begin();
+               fi != (*si).second->pos_effects().end(); fi++) {
+            if ((*fi) == (*ei) ) {
+              IloOr orConstraint(env);
+              // If either action effect is not true
+              orConstraint.add(addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0] == 0);
+              orConstraint.add(addEffectVars[addEffect[("SE-" + (*si).second->name() + "->" + (*fi)).c_str()]][0] == 0);
+              // If the action time of si > ai
+              orConstraint.add(stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] >= 1);
+              // For each step which deletes the prop
+              for (std::map<size_t, IlpAction*>::const_iterator ti =
+                       plan_->steps().begin();
+                   ti != plan_->steps().end(); ti++) {
+                if ((*ti).second->neg_effects().count(*ei) > 0) {
+                  IloAnd andConstraint(env);
+                  // ti > si and ai > ti
+                  andConstraint.add(stepTimeVars[stepTime[("ST-" + (*ti).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] >= 1);
+                  andConstraint.add(stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*ti).second->name()).c_str()]] >= 1);
+                  orConstraint.add(andConstraint);
+                }
+              }
+            }
+          }
+        }
+        // If the prop is an init prop
+        if (problem_->init().count(*ei) > 0) {
+          IloOr orConstraint(env);
+          // If the action effect is not true
+          orConstraint.add(addEffectVars[addEffect[("SE-" + (*ai).second->name() + "->" + (*ei)).c_str()]][0] == 0);
+          // For each step which deletes the prop
+          for (std::map<size_t, IlpAction*>::const_iterator si =
+                   plan_->steps().begin();
+               si != plan_->steps().end(); si++) {
+            if ((*si).second->neg_effects().count(*ei) > 0) {
+              // ai > si
+              orConstraint.add(stepTimeVars[stepTime[("ST-" + (*si).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] >= 1);
+            }
+          }
+        }
+      }
+    }
+
+
+    // Constraint set 7: Step ordering constraints
     for (std::map<size_t, size_t>::const_iterator oi = plan_->orderings().begin();
          oi != plan_->orderings().end(); oi++) {
       IloConstraint c7 = stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).first)->name()).c_str()]] 
@@ -1037,38 +1269,38 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax
       c7.setName(("C7-S_" + plan_->steps().at((*oi).first)->name() + "-S_" + plan_->steps().at((*oi).second)->name()).c_str());
     }
 
-    // Constraint set 9: Mutex constraints: Note that only an interference constraint is required (TODO: see if required by checking nodes explored)
-    //for (std::map<size_t, IlpAction*>::const_iterator ai =
-    //         plan_->steps().begin();
-    //     ai != plan_->steps().end(); ai++) {
-    //  for (std::map<size_t, IlpAction*>::const_iterator bi =
-    //           plan_->steps().begin();
-    //       bi != plan_->steps().end(); bi++) {
-    //    if (ai == bi) {
-    //      continue;
-    //    }
-    //    // For each precondition of ai, and each delete effect of bi
-    //    bool interference = false;
-    //    for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
-    //         ci != (*ai).second->conditions().end(); ci++) {
-    //      for (std::set<std::string>::const_iterator di = (*bi).second->neg_effects().begin();
-    //           di != (*bi).second->neg_effects().end(); di++) {
-    //        // If the precondition of ai is the delete effect of bi, then add a constraint
-    //        if ((*ci) == (*di)) {
-    //          interference = true;
-    //          IloConstraint c9 = (stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*bi).second->name()).c_str()]] != 0);
-    //          model.add(c9);
-    //          c9.setName(("C9-S_" + (*ai).second->name() + "-S_" + (*bi).second->name()).c_str());
-    //          os << "Mutex constraint: " << (*ai).second->name() << " and " << (*bi).second->name() << std::endl;
-    //          break;
-    //        }
-    //      }
-    //      if (interference) {
-    //        break;
-    //      }
-    //    }
-    //  }
-    //}
+    // Constraint set 9: Mutex constraints: Note that only an interference constraint is required
+    for (std::map<size_t, IlpAction*>::const_iterator ai =
+             plan_->steps().begin();
+         ai != plan_->steps().end(); ai++) {
+      for (std::map<size_t, IlpAction*>::const_iterator bi =
+               plan_->steps().begin();
+           bi != plan_->steps().end(); bi++) {
+        if (ai == bi) {
+          continue;
+        }
+        // For each precondition of ai, and each delete effect of bi
+        bool interference = false;
+        for (std::set<std::string>::const_iterator ci = (*ai).second->conditions().begin();
+             ci != (*ai).second->conditions().end(); ci++) {
+          for (std::set<std::string>::const_iterator di = (*bi).second->neg_effects().begin();
+               di != (*bi).second->neg_effects().end(); di++) {
+            // If the precondition of ai is the delete effect of bi, then add a constraint
+            if ((*ci) == (*di)) {
+              interference = true;
+              IloConstraint c9 = (stepTimeVars[stepTime[("ST-" + (*ai).second->name()).c_str()]] - stepTimeVars[stepTime[("ST-" + (*bi).second->name()).c_str()]] != 0);
+              model.add(c9);
+              c9.setName(("C9-S_" + (*ai).second->name() + "-S_" + (*bi).second->name()).c_str());
+              //os << "Mutex constraint: " << (*ai).second->name() << " and " << (*bi).second->name() << std::endl;
+              break;
+            }
+          }
+          if (interference) {
+            break;
+          }
+        }
+      }
+    }
 
 
     IloCplex cplex(model);
@@ -1081,6 +1313,8 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax
 
     // Set the lower limit of objective function parameter CPX_PARAM_OBJLLIM to lb
     cplex.setParam(IloCplex::Param::MIP::Limits::LowerObjStop, lb);
+    // Set time limit
+    cplex.setParam(IloCplex::Param::TimeLimit, seconds);
 
     // Optimize the problem and obtain solution.
     cplex.solve();

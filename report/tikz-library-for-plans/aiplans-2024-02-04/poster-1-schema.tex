@@ -1,0 +1,79 @@
+\newcommand{\PreEffLength}{1em} % both pre & effs (same length)
+\newcommand{\ActionWidth}{2.5em}  % width of actions
+\newcommand{\ActionHeight}{2em} % height of actions
+
+% Make sure that scheme definitions don't have empty lines; this will not compile!
+
+\scheme{A1}{0}{
+  text = {\textbf{A1}},
+  pres = {
+    {p}
+  },
+  effs = {
+    {q},
+    {{$\neg$p}}
+  },
+  limb length = \PreEffLength,
+  height      = \ActionHeight,
+  width       = \ActionWidth
+}
+
+\scheme{A2}{0}{
+  text = {\textbf{A2}},
+  pres = {
+    {q}
+  },
+  effs = {
+    {p},
+    {{$\neg$r}}
+  },
+  limb length = \PreEffLength,
+  height      = \ActionHeight,
+  width       = \ActionWidth
+}
+
+\scheme{A3}{0}{
+  text = {\textbf{A3}},
+  pres = {
+    {p}
+  },
+  effs = {
+    {r},
+    {{$\neg$q}}
+  },
+  limb length = \PreEffLength,
+  height      = \ActionHeight,
+  width       = \ActionWidth
+}
+
+\scheme{A4}{0}{
+  text = {\textbf{A4}},
+  pres = {
+    {q}
+  },
+  effs = {
+    {s},
+    {{$\neg$p}}
+  },
+  limb length = \PreEffLength,
+  height      = \ActionHeight,
+  width       = \ActionWidth
+}
+
+\scheme{init}{0}{
+  %text = {\hspace*{-2mm}}, % otherwise, the empty string is at least approx 4 mm wide
+  pres = {},
+  effs = { p },
+  height      = 5em,
+  width       = 0.25mm,
+  limb length = 1em
+}
+
+\scheme{goal}{0}{
+  %text = {\hspace*{-2mm}}, % otherwise, the empty string is at least approx 4 mm wide
+  pres = { r , s , p },
+  effs = {},
+  height      = 5em,
+  width       = 0.25mm,
+  limb length = 1em
+}

@@ -277,7 +277,7 @@ int main(int argc, char* argv[]) {
       }
       break;
     case 'T':
-      params.time_limit = std::chrono::minutes(atoi(optarg));
+      params.time_limit = std::chrono::seconds(atoi(optarg));
       break;
     case 't':
       if (optarg == std::string("unlimited")) {

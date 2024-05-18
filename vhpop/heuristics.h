@@ -164,6 +164,9 @@ struct PlanningGraph {
      parameter domain is empty. */
   const ActionDomain* action_domain(const std::string& name) const;
 
+  /* Returns the PredicateAtomsMap */
+  const std::multimap<Predicate, const Atom*>& predicate_atoms() const { return predicate_atoms_; }
+
 private:
   /* Atom value map. */
   struct AtomValueMap : public std::map<const Atom*, HeuristicValue> {
@@ -248,7 +251,7 @@ struct Heuristic {
   /* Fills the provided vector with the ranks for the given plan. */
   void plan_rank(std::vector<float>& rank, const Plan& plan,
                  float weight, const Domain& domain, const Problem& problem,
-                 const PlanningGraph* planning_graph) const;
+                 const PlanningGraph* planning_graph, const size_t seconds = 3600) const;
 
 private:
   /* Heuristics. */

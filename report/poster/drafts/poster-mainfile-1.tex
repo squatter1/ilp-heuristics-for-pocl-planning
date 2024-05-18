@@ -1,0 +1,34 @@
+\documentclass[a0,landscape,30pt]{sciposter}
+
+\usepackage{vwcol}                     % for the fancy content boxes
+\usepackage{tikz}                      % for the fancy content boxes (I think! Not sure...)
+\usepackage{multicol,multirow}         % standard ...
+\usepackage{booktabs}                  % standard ...
+\usepackage{amsmath,amssymb,amsthm}    % standard ...
+\usepackage{graphicx,xcolor}           % standard ...
+\usepackage{pgfplots}
+
+
+\begin{document}
+
+\input{macros-styles}
+\input{macros}
+
+% header
+\leftlogo[2.25]{logos/ANU-logo}
+
+\title{ILP-Based Delete Relaxation Heuristics for\\Partial Order Causal Link (POCL) Planning}
+
+\author{Scott Howsam, Pascal Bercher}
+\institute{The Australian National University}
+\renewcommand{\authorsize}{\huge}
+\renewcommand{\titlesize}{\Huge}
+\maketitle
+
+\setlength{\columnseprule}{0pt}
+
+\begin{multicols}{3}
+  \input{content}
+\end{multicols}
+
+\end{document}

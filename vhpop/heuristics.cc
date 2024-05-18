@@ -956,6 +956,7 @@ Heuristic& Heuristic::operator=(const std::string& name) {
     const char* n = key.c_str();
     if (strcasecmp(n, "HEUR_3770") == 0) {
       h_.push_back(HEUR_3770);
+      needs_pg_ = true;
     } else if (strcasecmp(n, "LIFO") == 0) {
       h_.push_back(LIFO);
     } else if (strcasecmp(n, "FIFO") == 0) {
@@ -1015,16 +1016,20 @@ bool Heuristic::needs_planning_graph() const {
 /* Fills the provided vector with the ranks for the given plan. */
 void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
                           float weight, const Domain& domain, const Problem& problem,
-                          const PlanningGraph* planning_graph) const {
+                          const PlanningGraph* planning_graph, const size_t seconds) const {
   bool add_done = false;
   float add_cost = 0.0f;
   int add_work = 0;
   bool addr_done = false;
   float addr_cost = 0.0f;
   int addr_work = 0;
+
+  //float goal_cost = 0.0f;
   for (std::vector<HVal>::const_iterator hi = h_.begin();
        hi != h_.end(); hi++) {
     HVal h = *hi;
+    std::ostream& os = std::cout;
+    
     // Debugging code TODO remove
     //// Define the osstream
     //std::ostream& os = std::cout;
@@ -1054,14 +1059,16 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     //os << "Solution length: " << solutionLengthNode << std::endl;
     //os << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 
-    std::ostream& os = std::cout;
-    // Time the heuristic
-    std::clock_t start;
-    double node_time;
-    start = std::clock();
-    const IlpNode ilpNode = IlpNode(problem, plan);
-    node_time = (std::clock() - start) / (double) CLOCKS_PER_SEC;
-    os << "Time to create ILP node: " << node_time << std::endl;
+    
+    //os << std::endl << std::endl << std::endl << std::endl << std::endl;
+    
+
+    // Calculate the formula_value of the goal formula
+    //HeuristicValue v, vs;
+    //formula_value(v, vs, problem.goal(), Plan::GOAL_ID, plan, *planning_graph, true);
+    //goal_cost = v.add_cost();
+    //// Print the cost
+    //os << "Cost: " << goal_cost << std::endl;
 
     //os << std::endl << std::endl << std::endl << std::endl << std::endl;
     //os << ilpNode;
@@ -1069,18 +1076,211 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     // print the node, note that .plan() will only give a reference to the plan
     //os << (*ilpNode.plan());
     
+    
+
+    //// Only include potentially applicable propositions and actions
+    //size_t max_length = heuristic_max_value + plan.num_steps();
+    //os << "Max length: " << max_length << std::endl;
+    //// Find applicable propositions
+    //const std::map<std::string, Predicate> old_predicates = problem.domain().predicates().predicates();
+    //std::map<std::string, Predicate> new_predicates = std::map<std::string, Predicate>();
+    ////for (std::map<std::string, Predicate>::const_iterator ai =
+    ////         old_predicates.begin();
+    ////     ai != old_predicates.end(); ai++) {
+    ////  os << "Check 1" << std::endl;
+    ////  // Get the atom of this predicate from the PredicateAtomsMap predicate_atoms_
+    ////  // struct PredicateAtomsMap : public std::multimap<Predicate, const Atom*>
+    ////  auto atoms = planning_graph->predicate_atoms().equal_range(ai->second);
+    ////  for (auto atom = atoms.first; atom != atoms.second; atom++) {
+    ////    os << "Atom: " << atom->second << std::endl;
+    ////    os << "Check 2" << std::endl;
+////
+    ////    // Calculate the formula value of this predicate
+    ////    HeuristicValue v, vs;
+    ////    formula_value(v, vs, atom->second, Plan::GOAL_ID, plan, *planning_graph, true);
+    ////    os << "Check 3" << std::endl;
+  ////
+    ////    // If the cost is <= the max_length, add it to the new_predicates
+    ////    os << "Add cost: " << v.add_cost() << std::endl;
+    ////    os << "Max length: " << max_length << std::endl;
+    ////    if (v.add_cost() <= max_length) {
+    ////      os << "Key: " << (*ai).first << std::endl;
+    ////      os << "Value: " << (*ai).second << std::endl;
+    ////      new_predicates.insert(std::make_pair((*ai).first, (*ai).second));
+    ////    }
+    ////    os << "New predicates size: " << new_predicates.size() << std::endl;
+    ////  }
+    ////  
+    ////}
+    //// Print the number of original predicates and the number of new predicates
+    //os << "Check 4" << std::endl;
+    //// Find applicable predicates
+    //// Loop through problem.domain().predicates().predicates()
+    //for (std::map<std::string, Predicate>::const_iterator ai =
+    //         old_predicates.begin();
+    //     ai != old_predicates.end(); ai++) {
+    //  // Get the atom of this predicate from the PredicateAtomsMap predicate_atoms_
+    //  // struct PredicateAtomsMap : public std::multimap<Predicate, const Atom*>
+    //  auto atoms = planning_graph->predicate_atoms().equal_range(ai->second);
+    //  for (auto atom = atoms.first; atom != atoms.second; atom++) {
+    //    // Calculate the formula value of this predicate
+    //    HeuristicValue v, vs;
+    //    formula_value(v, vs, *atom->second, Plan::GOAL_ID, plan, *planning_graph, false);
+    //    // If the atom name is f160, print the cost
+    //    if (PredicateTable::name((*atom->second).predicate()) == "f160") {
+    //      os << "Cost: " << v.add_cost() << std::endl;
+    //      os << "Max length: " << max_length << std::endl;
+    //    }
+    //    // If the cost is <= the max_length, add it to the new_predicates
+    //    if (v.add_cost() <= max_length) {
+    //      new_predicates.insert(std::make_pair(PredicateTable::name((*atom->second).predicate()), (*atom->second).predicate()));
+    //    }
+    //  }
+    //}
+    //os << "FIRST CHECK NUM OF PREDICATES" << new_predicates.size() << std::endl;
+    //// Find applicable actions
+    //std::map<std::string, const ActionSchema *> new_actions = std::map<std::string, const ActionSchema *>();
+    //for (std::map<std::string, const ActionSchema*>::const_iterator ai =
+    //           problem.domain().actions().begin();
+    //       ai != problem.domain().actions().end(); ai++) {
+    //  // Check that all preconditions are in new_predicates
+    //  bool is_applicable = true;
+    //  const Formula& condition_formula = (*ai).second->condition();
+    //  const Conjunction* precondition_conjunctions = dynamic_cast<const Conjunction*>(&condition_formula);
+    //  if (precondition_conjunctions) {
+    //    // Access conjuncts_ directly as member variable
+    //    for (FormulaList::const_iterator it = precondition_conjunctions->conjuncts().begin();
+    //         it != precondition_conjunctions->conjuncts().end(); ++it) {
+    //      const Formula* conjunct = *it;
+    //      // Get the atom
+    //      const Atom* atom = dynamic_cast<const Atom*>(conjunct);
+    //      if (atom) {
+    //        // Check if the atom is in new_predicates
+    //        if (new_predicates.find(PredicateTable::name((*atom).predicate())) == new_predicates.end()) {
+    //          if ((*ai).first == "set_goal_0_constraint0") {
+    //            os << "Atom not found: " << PredicateTable::name((*atom).predicate()) << std::endl;
+    //          }
+    //          is_applicable = false;
+    //          break;
+    //        }
+    //      } else {
+    //        std::cout << "Not an atom ERROR" << std::endl;
+    //        continue; // Not an atom
+    //      }
+    //    }
+    //  } else {
+    //    // Check if the condition is an atom
+    //    const Atom* atom = dynamic_cast<const Atom*>(&condition_formula);
+    //    if (atom) {
+    //      // Check if the atom is in new_predicates
+    //      if (new_predicates.find(PredicateTable::name((*atom).predicate())) == new_predicates.end()) {
+    //        is_applicable = false;
+    //      }
+    //    } else {
+    //      condition_formula.print(std::cout, 0, Bindings::EMPTY);
+    //      std::cout << "Not a conjunction ERROR" << std::endl;
+    //      return; // Not a conjunction
+    //    }
+    //  }
+//
+    //  // If is_applicable is true, add the action to new_actions
+    //  if (is_applicable) {
+    //    new_actions.insert(std::make_pair((*ai).first, (*ai).second));
+    //  }
+//
+    //  //// If the cost is <= the max_length, add it to the new_predicates
+    //  //if (max_cost <= max_length) {
+    //  //  new_actions.insert(std::make_pair((*ai).first, (*ai).second));
+    //  //  // Insert conditions and effects into new_predicates
+    //  //  // Iterate through the conjuncts in the preconditions
+    //  //  const Formula& condition_formula = (*ai).second->condition();
+    //  //  const Conjunction* precondition_conjunctions = dynamic_cast<const Conjunction*>(&condition_formula);
+    //  //  if (precondition_conjunctions) {
+    //  //    // Access conjuncts_ directly as member variable
+    //  //    for (FormulaList::const_iterator it = precondition_conjunctions->conjuncts().begin();
+    //  //         it != precondition_conjunctions->conjuncts().end(); ++it) {
+    //  //      const Formula* conjunct = *it;
+    //  //      // Get the atom
+    //  //      const Atom* atom = dynamic_cast<const Atom*>(conjunct);
+    //  //      if (atom) {
+    //  //        new_predicates.insert(std::make_pair(PredicateTable::name((*atom).predicate()), (*atom).predicate()));
+    //  //      } else {
+    //  //        std::cout << "Not an atom ERROR" << std::endl;
+    //  //        continue; // Not an atom
+    //  //      }
+    //  //    }
+    //  //  } else {
+    //  //    // Check if the condition is an atom
+    //  //    const Atom* atom = dynamic_cast<const Atom*>(&condition_formula);
+    //  //    if (atom) {
+    //  //      new_predicates.insert(std::make_pair(PredicateTable::name((*atom).predicate()), (*atom).predicate()));
+    //  //    } else {
+    //  //      condition_formula.print(std::cout, 0, Bindings::EMPTY);
+    //  //      std::cout << "Not a conjunction ERROR" << std::endl;
+    //  //      return; // Not a conjunction
+    //  //    }
+    //  //  }
+    //  //
+    //  //  // Iterate through the EffectList
+    //  //  const EffectList& effect_list = (*ai).second->effects();
+    //  //  for (EffectList::const_iterator ei = effect_list.begin(); ei != effect_list.end();
+    //  //       ei++) {
+    //  //    // Get the literal of this effect
+    //  //    const Literal& literal = (*ei)->literal();
+    //  //    // Get the atom of this literal
+    //  //    const Atom* atom = &literal.atom();
+    //  //    // Check for negation
+    //  //    const Negation* negation = dynamic_cast<const Negation*>(&literal);
+    //  //    if (negation) {
+    //  //      new_predicates.insert(std::make_pair(PredicateTable::name((*negation).predicate()), (*negation).predicate()));
+    //  //    } else {
+    //  //      new_predicates.insert(std::make_pair(PredicateTable::name((*atom).predicate()), (*atom).predicate()));
+    //  //    }
+    //  //  }
+    //  //}
+    //}
+    //// Add all initial props to new_predicates
+    ////AtomSet init_atoms = problem.init_atoms();
+    ////for (AtomSet::const_iterator ai = init_atoms.begin();
+    ////     ai != init_atoms.end(); ai++) {
+    ////  const Atom* atom = *ai;
+    ////  new_predicates.insert(std::make_pair(PredicateTable::name((*atom).predicate()), (*atom).predicate()));
+    ////}
+    ////os << "Number of original predicates: " << problem.domain().predicates().predicates().size() << std::endl;
+    ////os << "Number of new predicates: " << new_predicates.size() << std::endl;
+    ////// Print the number of original actions and the number of new actions
+    ////os << "Number of original actions: " << problem.domain().actions().size() << std::endl;
+    ////os << "Number of new actions: " << new_actions.size() << std::endl;
+    ////// If either the new_predicates or new_actions map is empty, return infinity
+    ////if (new_predicates.empty() || new_actions.empty()) {
+    ////  rank.push_back(std::numeric_limits<float>::infinity());
+    ////  return;
+    ////}
+
+    // Set limits
     const std::vector<float> heuristic_min = plan.heuristic_min();
     const std::vector<float> heuristic_max = plan.heuristic_max();
     size_t heuristic_min_value = 0;
     // Set to half of the maximum value
-    size_t heuristic_max_value = std::numeric_limits<size_t>::max()/2;
+    size_t heuristic_max_value = static_cast<size_t>(std::numeric_limits<size_t>::max());
     if (!heuristic_min.empty() && !heuristic_max.empty()) {
       heuristic_min_value = static_cast<size_t>(heuristic_min[0]);
       heuristic_max_value = static_cast<size_t>(heuristic_max[0]);
+    } else {
+      // Set to the minimum of problem.domain().predicates().predicates().size() and problem.domain().actions().size()
+      heuristic_max_value = std::min(problem.domain().predicates().predicates().size(), problem.domain().actions().size());
     }
 
+    // Create the ILP node
+    std::clock_t start;
+    double node_time;
+    start = std::clock();
+    const IlpNode ilpNode = IlpNode(problem, plan);//, new_predicates, new_actions);
+    node_time = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+    os << "Time to create ILP node: " << node_time << std::endl;
+
     const bool LP_RELAX = false; // TODO: make this a different heuristic name
-    size_t ilpSolutionLength = ilpNode.solve(os, 1, LP_RELAX, heuristic_min_value, heuristic_max_value);
+    size_t ilpSolutionLength = ilpNode.solve(os, 1, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds);
     size_t error_length = -2;
     size_t infeasible_length = -1;
 
@@ -1088,13 +1288,8 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     case HEUR_3770: /* SCOTT HOWSAM */
       os << "Heuristic value: " << ilpSolutionLength << ", Solution length: " << (ilpSolutionLength + plan.num_steps()) << std::endl;
       os << "Heuristic min: " << heuristic_min_value << ", Heuristic max: " << heuristic_max_value << std::endl;
-      if (ilpSolutionLength < heuristic_min_value) {
-        if (LP_RELAX) { // TODO fix up this if statement
-          ilpSolutionLength = heuristic_min_value;
-        } else {
-          os << "Heuristic value out of bounds" << std::endl;
-          std::this_thread::sleep_for(std::chrono::seconds(999));
-        }
+      if (ilpSolutionLength < heuristic_min_value && LP_RELAX) {
+        ilpSolutionLength = heuristic_min_value; // Can happen for LP_RELAX and some cases where lower bound is hit and obj isn't calculated
       }
       if (ilpSolutionLength > heuristic_max_value) {
         os << "Pruning this branch for inefficiency" << std::endl;

@@ -23,6 +23,8 @@
 #include <limits>
 #include <queue>
 #include <typeinfo>
+#include <thread>// TODO remove
+#include <chrono>// TODO remove
 
 #include "bindings.h"
 #include "debug.h"
@@ -620,7 +622,7 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
   float f_limit;
   if (current_plan != NULL
       && params->search_algorithm == Parameters::IDA_STAR) {
-    f_limit = current_plan->primary_rank();
+    f_limit = current_plan->primary_rank(std::max(0, static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(params->time_limit).count() - std::chrono::duration_cast<std::chrono::seconds>(timer.ElapsedTime()).count())));
   } else {
     f_limit = std::numeric_limits<float>::infinity();
   }
@@ -659,7 +661,7 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
       if (verbosity > 1) {
         std::cerr << std::endl << (num_visited_plans - num_static) << ": "
                   << "!!!!CURRENT PLAN (id " << current_plan->id_ << ")"
-                  << " with rank (" << current_plan->primary_rank();
+                  << " with rank (" << current_plan->primary_rank(std::max(0, static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(params->time_limit).count() - std::chrono::duration_cast<std::chrono::seconds>(timer.ElapsedTime()).count())));
         for (size_t ri = 1; ri < current_plan->rank_.size(); ri++) {
           std::cerr << ',' << current_plan->rank_[ri];
         }
@@ -672,11 +674,19 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
                                 params->flaw_orders[current_flaw_order]);
       /* Add children to queue of pending plans. */
       bool added = false;
+      /* thread sleep for 5 seconds */
+      //std::this_thread::sleep_for(std::chrono::seconds(5));
       for (PlanList::const_iterator pi = refinements.begin();
            pi != refinements.end(); pi++) {
+        const auto elapsed_time_2 = timer.ElapsedTime();
+        if (elapsed_time_2 >= params->time_limit) {
+          /* Time limit exceeded. */
+          std::cout << "Breaking" << std::endl;
+          break;
+        }
         const Plan& new_plan = **pi;
         // Set the minimum delete relaxed actions needed to complete this partial plan
-        new_plan.heuristic_min_.push_back(current_plan->primary_rank() - new_plan.num_steps());
+        new_plan.heuristic_min_.push_back(std::max(0, static_cast<int>(current_plan->primary_rank(std::max(0, static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(params->time_limit).count() - std::chrono::duration_cast<std::chrono::seconds>(timer.ElapsedTime()).count())))) - static_cast<int>(new_plan.num_steps())));
         // Maximum is same as minimum if no steps have been added, else, they are minimum + delete effects of new step
         if (current_plan->num_steps() == new_plan.num_steps()) {
           new_plan.heuristic_max_.push_back(new_plan.heuristic_min_[0]);
@@ -709,14 +719,21 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
           new_plan.heuristic_max_.push_back(new_plan.heuristic_min_[0] + delete_effects);
         }
 
+        const auto elapsed_time_3 = timer.ElapsedTime();
+        if (elapsed_time_3 >= params->time_limit) {
+          /* Time limit exceeded. */
+          std::cout << "Breaking" << std::endl;
+          break;
+        }
+
         /* N.B. Must set id before computing rank, because it may be used. */
         new_plan.id_ = num_generated_plans;
-        if (new_plan.primary_rank() != std::numeric_limits<float>::infinity()
+        if (new_plan.primary_rank(std::max(0, static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(params->time_limit).count() - std::chrono::duration_cast<std::chrono::seconds>(timer.ElapsedTime()).count()))) != std::numeric_limits<float>::infinity()
             && (generated_plans[current_flaw_order]
                 < params->search_limits[current_flaw_order])) {
           if (params->search_algorithm == Parameters::IDA_STAR
-              && new_plan.primary_rank() > f_limit) {
-            next_f_limit = std::min(next_f_limit, new_plan.primary_rank());
+              && new_plan.primary_rank(std::max(0, static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(params->time_limit).count() - std::chrono::duration_cast<std::chrono::seconds>(timer.ElapsedTime()).count()))) > f_limit) {
+            next_f_limit = std::min(next_f_limit, new_plan.primary_rank(std::max(0, static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(params->time_limit).count() - std::chrono::duration_cast<std::chrono::seconds>(timer.ElapsedTime()).count()))));
             delete &new_plan;
             continue;
           }
@@ -729,7 +746,7 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
           num_generated_plans++;
           if (verbosity > 2) {
             std::cerr << std::endl << "####CHILD (id " << new_plan.id_ << ")"
-                      << " with rank (" << new_plan.primary_rank();
+                      << " with rank (" << new_plan.primary_rank(std::max(0, static_cast<int>(std::chrono::duration_cast<std::chrono::seconds>(params->time_limit).count() - std::chrono::duration_cast<std::chrono::seconds>(timer.ElapsedTime()).count())));
             for (size_t ri = 1; ri < new_plan.rank_.size(); ri++) {
               std::cerr << ',' << new_plan.rank_[ri];
             }
@@ -741,6 +758,12 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
       }
       if (!added) {
         num_dead_ends++;
+      }
+      const auto elapsed_time_4 = timer.ElapsedTime();
+      if (elapsed_time_4 >= params->time_limit) {
+        /* Time limit exceeded. */
+        std::cout << "Breaking" << std::endl;
+        break;
       }
 
       /*
@@ -842,7 +865,8 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
       current_plan = initial_plan;
     }
   } while (f_limit != std::numeric_limits<float>::infinity());
-  if (verbosity > 0) {
+  std::cout << "Plans generated: " << num_generated_plans;
+  if (verbosity >= 0) {
     /*
      * Print statistics.
      */
@@ -943,10 +967,10 @@ bool Plan::complete() const {
 
 /* Returns the primary rank of this plan, where a lower rank
    signifies a better plan. */
-float Plan::primary_rank() const {
+float Plan::primary_rank(size_t seconds) const {
   if (rank_.empty()) {
     params->heuristic.plan_rank(rank_, *this, params->weight, *domain, *problem,
-                                planning_graph);
+                                planning_graph, seconds);
   }
   return rank_[0];
 }

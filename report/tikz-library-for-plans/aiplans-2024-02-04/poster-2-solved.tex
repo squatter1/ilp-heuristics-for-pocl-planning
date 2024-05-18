@@ -1,0 +1,19 @@
+
+%   Note that when specifying math code ($...$) in the preconditions and effects, you need to
+%   put it in an *additional* set of parentheses (in addition to the ones already there). Example:
+%   pres = { {A} , {B} , {C} }, BUT:
+%   pres = { {A{$_1$}} , {B{$_2$}} , {C{$_1$}} }, or simply
+%   pres = { {{A$_1$}} , {{B$_2$}} , {{C$_1$}} }.
+%   Otherwise, you will get strange compilation errors...
+
+
+% some plan for the Blocksworld domain with two grippers.
+\begin{tikzpicture}
+    \action{init}{init, body={draw=black, fill=black}}
+    \action{A1}{A1, body = {rounded corners, draw=black, fill=white, right = 3 em of init}}
+    \action{A2}{A2, body = {rounded corners, draw=black, fill=white, right = 4 em of A1}}
+    \action{A3}{A3, body = {rounded corners, draw=black, fill=white, right = 4 em of A2}}
+    \action{goal}{goal, body = {draw=black, fill=black,right = 4 em of A3}}
+
+    
+  \end{tikzpicture}

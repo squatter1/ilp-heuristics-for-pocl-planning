@@ -177,7 +177,7 @@ struct Plan {
 
   /* Returns the primary rank of this plan, where a lower rank
      signifies a better plan. */
-  float primary_rank() const;
+  float primary_rank(size_t seconds = 3600) const;
 
   /* Returns the heuristic min of this plan. */
   const std::vector<float> heuristic_min() const { return heuristic_min_; };

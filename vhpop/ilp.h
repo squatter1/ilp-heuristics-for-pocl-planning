@@ -80,6 +80,9 @@ struct IlpProblem {
   /* Constructs an ILP problem from a problem. */
   IlpProblem(const Problem& problem);
 
+  /* Constructs an Ilp problem from a problem, with restricted predicates and actions. */
+  IlpProblem(const Problem& problem, std::map<std::string, Predicate> new_predicates, std::map<std::string, const ActionSchema *> new_actions);
+
   /* Deletes an ILP problem. */
   ~IlpProblem();
 
@@ -204,6 +207,9 @@ struct IlpNode {
     /* Constructs an ILP node from a problem and a plan. */
     IlpNode(const Problem& problem, const Plan& plan);
 
+    /* Constructs an ILP node from a problem and a plan, with restricted predicates and actions. */
+    IlpNode(const Problem& problem, const Plan& plan, std::map<std::string, Predicate> new_predicates, std::map<std::string, const ActionSchema *> new_actions);
+
     /* Constructs an ILP node from an ILP problem and an ILP plan. */
     IlpNode(IlpProblem* problem, IlpPlan* plan);
   
@@ -220,7 +226,7 @@ struct IlpNode {
     IlpPlan* plan() const { return plan_; }
   
     /* Finds the shortest solution length of the problem from this node with an ILP by adding delete relaxed problem actions */
-    const size_t solve(std::ostream& os, short int verbosity = 0, bool lp_relax = false, size_t lb = 0, size_t ub = -1) const;
+    const size_t solve(std::ostream& os, short int verbosity = 0, bool lp_relax = false, size_t lb = 0, size_t ub = -1, size_t seconds = 3600) const;
 
   private:
     /* Node id (serial number). */

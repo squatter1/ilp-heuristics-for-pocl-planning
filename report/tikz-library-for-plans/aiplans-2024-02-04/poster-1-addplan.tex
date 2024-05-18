@@ -1,0 +1,29 @@
+
+%   Note that when specifying math code ($...$) in the preconditions and effects, you need to
+%   put it in an *additional* set of parentheses (in addition to the ones already there). Example:
+%   pres = { {A} , {B} , {C} }, BUT:
+%   pres = { {A{$_1$}} , {B{$_2$}} , {C{$_1$}} }, or simply
+%   pres = { {{A$_1$}} , {{B$_2$}} , {{C$_1$}} }.
+%   Otherwise, you will get strange compilation errors...
+
+
+% some plan for the Blocksworld domain with two grippers.
+\begin{tikzpicture}
+    \greenaction{init}{init, body={draw=black, fill=black}}
+    \greenredaction{A1}{A1, body = {rounded corners, draw=black, fill=white, right = 4 em of init}}
+    \openaction{A3}{A3, body = {rounded corners, draw=black, fill=white, right = 4 em of A1}}
+    \openaction{A2}{A2, body = {rounded corners, draw=black, fill=white, right = 4 em of A3}}
+    \opengreenaction{A4}{A4, body = {rounded corners, draw=black, fill=white, right = 4 em of A2}}
+    \goalaction{goal}{goal, body = {draw=black, fill=black,right = 4 em of A4}}
+
+    \greenlink{init/eff/1}{A1/pre/1}{edge[-]}
+    \greenlink{A4/eff/1}{goal/pre/2}{edge[-]}
+
+    \redlink{A1/eff/2}{A3/pre/1}{edge[-]}
+    \redlink{A3/eff/2}{A2/pre/1}{edge[-]}
+    \bendaredlink{A3/eff/2}{A4/pre/1}{edge[bend right=35, -]}
+    \bendbredlink{A2/eff/2}{goal/pre/1}{edge[bend left, -]}
+    \redlink{A4/eff/2}{goal/pre/3}{edge[-]}
+
+
+  \end{tikzpicture}
