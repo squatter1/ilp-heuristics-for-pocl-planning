@@ -1280,7 +1280,7 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     os << "Time to create ILP node: " << node_time << std::endl;
 
     const bool LP_RELAX = false; // TODO: make this a different heuristic name
-    size_t ilpSolutionLength = ilpNode.solve(os, 1, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds);
+    size_t ilpSolutionLength = ilpNode.solve(os, 3, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds);
     size_t error_length = -2;
     size_t infeasible_length = -1;
 
