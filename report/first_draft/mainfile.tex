@@ -54,7 +54,7 @@ citecolor   = blue
 \usepackage{datetime}                                % to be able to print month & year on title page
   \newdateformat{monthonly}{\monthname[\THEMONTH]}
 \usepackage{amssymb,amsthm,amsmath}                  % standard math packages; often used
-\usepackage{graphicx}                                % allows including graphics
+\usepackage{graphicx,xcolor}                                % allows including graphics
 \usepackage{natbib}                                  % a specific citation style
 \usepackage{floatrow}                                % allows to place a caption next to a figure
   \floatsetup[table]{capposition=top}                 % forces table captions to appear on top.
@@ -66,6 +66,8 @@ citecolor   = blue
 \usepackage{parskip}                                 % when this is included, no indentations are used for new paragraphs,
                                                      % and instead paragraphs are separated by a small distance between them
 
+\usepackage{tikz}                      % for the fancy content boxes (I think! Not sure...)
+\usepackage{pgfplots}
 
 % [requires titlesec]
 % Surrounds all chapter titles by lines,

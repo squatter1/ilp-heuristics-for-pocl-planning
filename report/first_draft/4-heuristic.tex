@@ -67,7 +67,7 @@ Finally, we define the constraints of $\mathit{ILP}(\mathcal{P}^+)$. The value $
 
 
 \textbf{Goals Achieved (C1):} For each goal proposition, ensure that there is at least one instance achieved after all of its deletions.
-\[\forall v_g\in g:\bigvee_{PU_{v_g,ps_a}\in PU}\left(PU_{v_g,ps_a}=1\wedge\left(\bigwedge_{SD_{ps_b,v_g}\in SD}(PT_{v_g,ps_a}-ST_{ps_b}\geq 1)\right)\right)\]\\
+\[\forall v_g\in g:\bigvee_{PU_{v_g,ps_a}\in PU}\left((PU_{v_g,ps_a}=1)\wedge\left(\bigwedge_{SD_{ps_b,v_g}\in SD}(PT_{v_g,ps_a}-ST_{ps_b}\geq 1)\right)\right)\]\\
 
 
 \textbf{First Achievers Must be Executed (C2):} For each action effect instance, ensure that if the action instance is the first achiever of this effect, the action instance is used.
@@ -77,8 +77,8 @@ Finally, we define the constraints of $\mathit{ILP}(\mathcal{P}^+)$. The value $
 \textbf{Propositions are Preceded by an Achiever (C3):} For each proposition instance that is not in $s_I$, ensure that the time step prior to the instance being achieved contains an achiever for the proposition.
 \begin{align*}
 &\forall PU_{v_i,ps_i}\in PU\setminus SI:\\
-&PU_{v_i,ps_i}=0\vee\\
-&\bigvee_{AE_{a_f,v_f,ps_f,v_i}\in AE}((AE_{a_f,v_f,ps_f,v_i}=1)\wedge (PT_{v_i,ps_i}-AT_{a_f,v_f,ps_f}=1))\\
+&(PU_{v_i,ps_i}=0)\vee\\
+&\bigvee_{AE_{a_f,v_f,ps_f,v_i}\in AE}((AE_{a_f,v_f,ps_f,v_i}=1)\wedge (PT_{v_i,ps_i}-AT_{a_f,v_f,ps_f}=1))\vee\\
 &\bigvee_{SE_{ps,v_i}\in SE}((SE_{ps,v_i}=1)\wedge (PT_{v_i,ps_i}-ST_{ps}=1))
 \end{align*}\\
 
@@ -86,7 +86,7 @@ Finally, we define the constraints of $\mathit{ILP}(\mathcal{P}^+)$. The value $
 \textbf{Actions are Preceded by their Preconditions (C4):} For each action instance, and each of its preconditions, ensure that there is at least one instance of the precondition achieved before the action instance, and no deletions of the precondition in-between the times of the precondition instance and the action instance.
 \begin{align*}
 &\forall AU_{a_i,v_i,ps_i}\in AU, \forall v_p\in\Pre (a_i):\\
-&AU_{a_i,v_i,ps_i}=0\vee\bigvee_{PU_{v_p,ps_a}\in PU}\left(\vphantom{\bigwedge_{SD_{ps_b,v_p}\in SD}}(PU_{v_p,ps_a}=1)\wedge (AT_{a_i,v_i,ps_i}-PT_{v_p,ps_a}\geq 0)\wedge\right.\\
+&(AU_{a_i,v_i,ps_i}=0)\vee\bigvee_{PU_{v_p,ps_a}\in PU}\left(\vphantom{\bigwedge_{SD_{ps_b,v_p}\in SD}}(PU_{v_p,ps_a}=1)\wedge (AT_{a_i,v_i,ps_i}-PT_{v_p,ps_a}\geq 0)\wedge\right.\\
 &\left(\bigwedge_{SD_{ps_b,v_p}\in SD}((PT_{v_p,ps_a}-ST_{ps_b}\geq 1)\vee(ST_{ps_b}-AT_{a_i,v_i,ps_i}\geq 1))\right)\left.\vphantom{\bigwedge_{SD_{ps_b,v_p}\in SD}}\right)
 \end{align*}\\
 
