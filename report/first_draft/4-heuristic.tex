@@ -1,4 +1,4 @@
-\chapter{Delete Relaxation Heuristic}\label{chap:heuristic}
+\chapter{Well-Informed Delete Relaxation Heuristics for POCL Planning}\label{chap:heuristic}
 
 In this chapter we define the ILP model $\mathit{ILP}(\mathcal{P}^+)$, which is the ILP formulation of a delete relaxed POCL planning problem $\mathcal{P}^+$. The goal of this ILP model is to ensure that there exists a relaxed POCL plan $P$ for $(\mathcal{P}^+)$ if and only if there is a corresponding feasible solution to $\mathit{ILP}(\mathcal{P}^+)$ whose cost is equivalent to the number of actions added to create $P$. This mapping will be injective, there may be more than one feasible solution corresponding to each relaxed POCL plan. We then define the ILP model $\mathit{ILP_c}(\mathcal{P}^+)$, which is further relaxed by utilising counting constraints. Note that $\mathcal{P}^+$ represents a search node where current delete effects and causal links are not relaxed, future additional actions are delete-relaxed, and causal links are compiled to allow them to be respected by additional actions. Due to this compilation, causal links are represented as propositions, and will not be treated differently to any other proposition in the model. These models are loosely based on the ILP model for a delete relaxed planning graph in classical planning by~\cite{Imai2015ILPDeleteRelaxedPlanning}.\\
 
@@ -157,10 +157,10 @@ Given an optimal solution for $\mathit{ILP}(\mathcal{P}^+)$, the plan step seque
 
 \section{ILP Formulation of a Counting-Based Relaxation}
 
-The ILP model $\mathit{ILP}(\mathcal{P}^+)$ is not effective for solving planning problems, as its restrictive constraints make it incapable of solving any reasonably sized planning problem. This will be further discussed in the evaluation section, with possible solutions in the future work section. Hence, we use counting based constraints, as popularised in ILP heuristics by~\cite{Pommerening2014LPHeuristics}, to define a further relaxed heuristic $\mathit{ILP_c}(\mathcal{P}^+)$ which is reasonable to use in evaluations. This heuristic uses the same variables and objective function, so below we only list the new constraints. Later, we discuss in what way this relaxes the problem further than regular delete relaxation.\\
+The ILP model $\mathit{ILP}(\mathcal{P}^+)$ is not effective for solving planning problems, as its restrictive constraints make it incapable of solving any reasonably sized planning problem. This will be further discussed in the evaluation section, with possible solutions in the future work section. Hence, we use counting-based constraints, as popularised in ILP heuristics by~\cite{Pommerening2014LPHeuristics}, to define a further relaxed heuristic $\mathit{ILP_c}(\mathcal{P}^+)$ which is reasonable to use in evaluations. This heuristic uses the same variables and objective function, so below we only list the new constraints. Later, we discuss in what way this relaxes the problem further than regular delete relaxation.\\
 
 
-$\mathit{ILP_c}(\mathcal{P}^+)$ does not use $\vee$ and $\wedge$ operators as it instead focuses on summations and counting based constraints, but it does require additional auxiliary variables. These variables will be described when necessary to represent the truth value of a linear inequality. For example a variable $v=(y-z\geq 0)$ would have a value of 1 when $y-z\geq 0$ and 0 otherwise. Fully notating these linear equality boolean variables requires multiple constraints to be added, but since the procedure to add these types of variables is well known, I will use the $v=(a^Tx\geq b)$ shorthand for simplicity. The value $M$ is also used in some of these constraints as a large value used to render constraints either necessarily true or necessarily false under some condition. It is set to $M=ub+2$, noting that only adding one to the bound can cause issues with constraints that use a $+1$ to connect actions with effect propositions on the following time step.\\
+$\mathit{ILP_c}(\mathcal{P}^+)$ does not use $\vee$ and $\wedge$ operators as it instead focuses on summations and counting-based constraints, but it does require additional auxiliary variables. These variables will be described when necessary to represent the truth value of a linear inequality. For example a variable $v=(y-z\geq 0)$ would have a value of 1 when $y-z\geq 0$ and 0 otherwise. Fully notating these linear equality boolean variables requires multiple constraints to be added, but since the procedure to add these types of variables is well known, we will use the $v=(a^Tx\geq b)$ shorthand for simplicity. The value $M$ is also used in some of these constraints as a large value used to render constraints either necessarily true or necessarily false under some condition. It is set to $M=ub+2$, noting that only adding one to the bound can cause issues with constraints that use a $+1$ to connect actions with effect propositions on the following time step.\\
 
 
 \textbf{Goals Achieved (C1):} For each goal proposition, ensure that more instances of it are used than are deleted.
@@ -175,19 +175,19 @@ $\mathit{ILP_c}(\mathcal{P}^+)$ does not use $\vee$ and $\wedge$ operators as it
 
 
 Firstly, we define a set of action effect achieved variables representing whether a given action effect achieves the proposition prior to the proposition time of the instance.
-\[AEA=\{AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a}\in\{0,1\}\mid PU_{v_i,ps_i}\in PU,AE_{a_f,v_f,ps_f,v_a}\in AE\}\]
+\[AEA=\{AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a}\mid PU_{v_i,ps_i}\in PU,AE_{a_f,v_f,ps_f,v_a}\in AE\}\]
 \[ \forall AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a}\in AEA:\mathit{dom}(AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a})=\{0,1\}\]
 \[ \forall AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a}\in AEA:AEA_{v_i,ps_i,a_f,v_f,ps_f,v_a}=(PT_{v_i,ps_i}-AT_{a_f,v_f,ps_f}\geq 0)\]\\
 
 
 Next, we define a set of step effect achieved variables representing whether a given step effect achieves the proposition prior to the proposition time of the instance.
-\[SEA=\{SEA_{v_i,ps_i,ps_j,v_j}\in\{0,1\}\mid PU_{v_i,ps_i}\in PU,SE_{ps_j,v_j}\in SE\}\]
+\[SEA=\{SEA_{v_i,ps_i,ps_j,v_j}\mid PU_{v_i,ps_i}\in PU,SE_{ps_j,v_j}\in SE\}\]
 \[ \forall SEA_{v_i,ps_i,ps_j,v_j}\in SEA:\mathit{dom}(SEA_{v_i,ps_i,ps_j,v_j})=\{0,1\}\]
 \[ \forall SEA_{v_i,ps_i,ps_j,v_j}\in SEA:SEA_{v_i,ps_i,ps_j,v_j}=(PT_{v_i,ps_i}-ST_{ps_j}\geq 0)\]\\
 
 
 Finally, we define a set of proposition instance achieved variables representing whether a given other instance of the proposition is achieved before the proposition time of the instance.
-\[PIA=\{PIA_{v,ps_i,ps_j}\in\{0,1\}\mid PU_{v,ps_i}\in PU,PU_{v,ps_j}\in PU,ps_i\neq ps_j\}\]
+\[PIA=\{PIA_{v,ps_i,ps_j}\mid PU_{v,ps_i}\in PU,PU_{v,ps_j}\in PU,ps_i\neq ps_j\}\]
 \[ \forall PIA_{v,ps_i,ps_j}\in PIA:\mathit{dom}(PIA_{v,ps_i,ps_j})=\{0,1\}\]
 \[ \forall PIA_{v,ps_i,ps_j}\in PIA:PIA_{v,ps_i,ps_j}=(PT_{v,ps_i}-PT_{v,ps_j}\geq 0)\]\\
 
@@ -202,13 +202,13 @@ By utilising these variables we can now define the constraints:
 
 
 Firstly, we define a set of action precondition satisfied variables representing whether a precondition instance is achieved prior to the action:
-\[APS=\{APS_{a_i,v_i,ps_i,v_j,ps_j}\in\{0,1\}\mid AU_{a_i,v_i,ps_i}\in AU, v_j\in\Pre (a_i), PU_{v_j,ps_j}\in PU\}\]
+\[APS=\{APS_{a_i,v_i,ps_i,v_j,ps_j}\mid AU_{a_i,v_i,ps_i}\in AU, v_j\in\Pre (a_i), PU_{v_j,ps_j}\in PU\}\]
 \[\forall APS_{a_i,v_i,ps_i,v_j,ps_j}\in APS:\mathit{dom}(APS_{a_i,v_i,ps_i,v_j,ps_j})=\{0,1\}\]
 \[\forall APS_{a_i,v_i,ps_i,v_j,ps_j}\in APS: APS_{a_i,v_i,ps_i,v_j,ps_j}=(PT_{v_j,ps_j}-AT_{a_i,v_i,ps_i}\geq 0)\]\\
 
 
 We also define a set of action precondition deleted variables representing whether the precondition is deleted by a given step prior to the action:
-\[APD=\{APD_{a_i,v_i,ps_i,v_j,ps_j}\in\{0,1\}\mid AU_{a_i,v_i,ps_i}\in AU, ps_j\in PS_I,v_j\in\Del(ps_j)\}\]
+\[APD=\{APD_{a_i,v_i,ps_i,v_j,ps_j}\mid AU_{a_i,v_i,ps_i}\in AU, ps_j\in PS_I,v_j\in\Del(ps_j)\}\]
 \[\forall APD_{a_i,v_i,ps_i,v_j,ps_j}\in APD:\mathit{dom}(APD_{a_i,v_i,ps_i,v_j,ps_j})=\{0,1\}\]
 \[\forall APD_{a_i,v_i,ps_i,v_j,ps_j}\in APD: APD_{a_i,v_i,ps_i,v_j,ps_j}=(AT_{a_i,v_i,ps_i}-ST_{ps_j}\geq 1)\]\\
 
@@ -223,13 +223,13 @@ By utilising these variables we can now define the constraints:
 
 
 Firstly, we define a set of step precondition satisfied variables representing whether a precondition instance is achieved prior to the step:
-\[SPS=\{SPS_{ps_i,v_j,ps_j}\in\{0,1\}\mid ps_i\in PS_I, v_j\in\Pre (ps_i), PU_{v_j,ps_j}\in PU\}\]
+\[SPS=\{SPS_{ps_i,v_j,ps_j}\mid ps_i\in PS_I, v_j\in\Pre (ps_i), PU_{v_j,ps_j}\in PU\}\]
 \[\forall SPS_{ps_i,v_j,ps_j}\in SPS:\mathit{dom}(SPS_{ps_i,v_j,ps_j})=\{0,1\}\]
 \[\forall SPS_{ps_i,v_j,ps_j}\in SPS: SPS_{ps_i,v_j,ps_j}=(PT_{v_j,ps_j}-ST_{ps_i}\geq 0)\]\\
 
 
 We also define a set of step precondition deleted variables representing whether the precondition is deleted by a given other step prior to the step:
-\[SPD=\{SPD_{ps_i,v_j,ps_j}\in\{0,1\}\mid ps_i\in PS_I, ps_j\in PS_I,v_j\in\Del(ps_j)\}\]
+\[SPD=\{SPD_{ps_i,v_j,ps_j}\mid ps_i\in PS_I, ps_j\in PS_I,v_j\in\Del(ps_j)\}\]
 \[\forall SPD_{ps_i,v_j,ps_j}\in SPD:\mathit{dom}(SPD_{ps_i,v_j,ps_j})=\{0,1\}\]
 \[\forall SPD_{ps_i,v_j,ps_j}\in SPD: SPD_{ps_i,v_j,ps_j}=(ST_{ps_i}-ST_{ps_j}\geq 1)\]\\
 

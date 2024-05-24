@@ -12,10 +12,14 @@
     \action{init}{init, body={draw=black, fill=black}}
     \action{A1}{A1, body = {rounded corners, draw=black, fill=white, right = 2 em of init}}
     \action{A2}{A2, body = {rounded corners, draw=black, fill=white, right = 4 em of A1}}
-    \action{goal}{goal, body = {draw=black, fill=black,right = 4 em of A2}}
+    \action{A3}{A3, body = {rounded corners, draw=black, fill=white, right = 2 em of A2, yshift=-3em}}
+    \action{goal}{goal, body = {draw=black, fill=black,right = 8 em of A2}}
 
-    \action{A3}{A3, body = {rounded corners, draw=black, fill=white, right = 6 em of A1, yshift=-3em, label={[anchor=west, xshift=-105pt, text=black]left:Additional Action/s:}}}
+    
   
     \link{A1/eff/1}{A2/pre/1}{edge[bend left,->]}
     \link{A2/eff/1}{goal/pre/1}{edge[bend left,->]}
+    \link{A3/eff/1}{goal/pre/2}{edge[bend left,->]}
+
+    \orderingRight{A2}{A3}
   \end{tikzpicture}

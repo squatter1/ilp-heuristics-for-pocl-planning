@@ -18,6 +18,6 @@ for domainFolder in $folder/*; do
         fi
         echo "Evaluating problem $i"
         # Run the planner on the instance
-        ./vhpop -h HEUR_3770 -f LCFR -l 10000 -f MW -l unlimited -T 5 $domainFolder/domain.pddl $domainFolder/$instanceName
+        ./vhpop -h ILP -f LCFR -l 10000 -f MW -l unlimited -T 5 $domainFolder/domain.pddl $domainFolder/$instanceName
     done
 done

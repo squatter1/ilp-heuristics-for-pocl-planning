@@ -23,8 +23,6 @@
 #include <limits>
 #include <queue>
 #include <typeinfo>
-#include <thread>// TODO remove
-#include <chrono>// TODO remove
 
 #include "bindings.h"
 #include "debug.h"
