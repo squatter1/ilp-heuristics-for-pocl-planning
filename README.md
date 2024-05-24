@@ -8,5 +8,6 @@ cd into the vhpop folder. You can then run vhpop. Here is an example command to 
 ```
 ./vhpop -h ILP -f LCFR -l 10000 -f MW -l unlimited ./examples/_grounded-bulldozer-domain.pddl ./examples/_grounded-bulldozer-simple.pddl
 ```
+For further details look at the vhpop readme.\
 The counting constraint relaxation is also available with the heuristic name ILPC. Both will be default print their solutions for each node, but this can be turned off in heuristics.cc by changing the verbosity in their function calls to 0.\
 Most of my code can be found in the ilp.h and ilp.cc files, which were fully coded by me. I also added code to heuristics.h and heuristics.cc, as well as plans.h and plans.cc.
