@@ -61,3 +61,42 @@ vhpop/*.la
 
 # Backup files.
 vhpop/*~
+
+# Administrative documents (study contract etc.)
+admin/
+
+# Large grounded IPC benchmark sets (hundreds of MB; not tracked)
+vhpop/examples/IPC1_grounded/
+vhpop/examples/IPC3_grounded/
+vhpop/examples/UIPC1_grounded/
+
+# Build artifacts anywhere (vhpop, gtest, src)
+**/*.o
+**/*.lo
+**/*.la
+**/*.lai
+**/*.a
+**/*.so
+**/*.so.*
+**/*.Po
+**/*.Plo
+**/.libs/
+**/.deps/
+**/.dirstamp
+**/autom4te.cache/
+**/config.log
+**/config.status
+**/stamp-h1
+vhpop/gtest/Makefile
+vhpop/gtest/Makefile.in
+vhpop/gtest/configure
+vhpop/gtest/aclocal.m4
+vhpop/gtest/build-aux/config.h
+vhpop/gtest/build-aux/config.h.in
+
+# Backups, tarballs, stray solver output files
+**/*.bak
+**/*~
+*.tar.gz
+vhpop/at-bulldozer-*
+vhpop-old/
