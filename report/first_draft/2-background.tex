@@ -25,7 +25,7 @@ Classical solutions to planning problems are called \textit{total-order} plans, 
 \end{figure}
 
 
-For the creation of our heuristic, we emulate the delete relaxation heuristics of state-based total-order planning. These heuristics utilise the delete relaxation of classical planning problems. In state-based planning, a search node represents a state, and so by substituting $s_I$ for the state of the current search node, a new classical planning problem can be created, and the solution length of its delete relaxation can be used as a heuristic value. Hence, it is important to more formally define the delete relaxation of a classical problem..\\
+For the creation of our heuristic, we emulate the delete relaxation heuristics of state-based total-order planning. These heuristics utilise the delete relaxation of classical planning problems. In state-based planning, a search node represents a state, and so by substituting $s_I$ for the state of the current search node, a new classical planning problem can be created, and the solution length of its delete relaxation can be used as a heuristic value. Hence, it is important to more formally define the delete relaxation of a classical problem.\\
 
 
 The \textit{delete relaxation} of a classical planning problem $\mathcal{P}$ is the problem $\mathcal{P}^+$, which is $\mathcal{P}$ but with $\Del(a)=\emptyset$ for all $a\in A$, meaning that all delete effects of actions are removed. By ignoring all delete effects in future actions, any action that becomes executable will forever remain executable. This advantage makes $\mathcal{P}^+$ a polytime problem, as shown by~\cite{Bylander1994ComplexityOfSTRIPS}.\\
