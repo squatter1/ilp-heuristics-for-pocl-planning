@@ -672,14 +672,11 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
                                 params->flaw_orders[current_flaw_order]);
       /* Add children to queue of pending plans. */
       bool added = false;
-      /* thread sleep for 5 seconds */
-      //std::this_thread::sleep_for(std::chrono::seconds(5));
       for (PlanList::const_iterator pi = refinements.begin();
            pi != refinements.end(); pi++) {
         const auto elapsed_time_2 = timer.ElapsedTime();
         if (elapsed_time_2 >= params->time_limit) {
           /* Time limit exceeded. */
-          std::cout << "Breaking" << std::endl;
           break;
         }
         const Plan& new_plan = **pi;
@@ -720,7 +717,6 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
         const auto elapsed_time_3 = timer.ElapsedTime();
         if (elapsed_time_3 >= params->time_limit) {
           /* Time limit exceeded. */
-          std::cout << "Breaking" << std::endl;
           break;
         }
 
@@ -760,7 +756,6 @@ const Plan* Plan::plan(const Problem& problem, const Parameters& p,
       const auto elapsed_time_4 = timer.ElapsedTime();
       if (elapsed_time_4 >= params->time_limit) {
         /* Time limit exceeded. */
-        std::cout << "Breaking" << std::endl;
         break;
       }
 

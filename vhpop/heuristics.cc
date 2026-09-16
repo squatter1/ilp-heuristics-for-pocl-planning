@@ -1054,9 +1054,9 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     case ILPC:
       // Solve the ILP
       if (h == ILP)
-        ilpSolutionLength = ilpNode.solve(os, 1, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds);
+        ilpSolutionLength = ilpNode.solve(os, verbosity, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds);
       else
-        ilpSolutionLength = ilpNode.counting_solve(os, 1, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds);
+        ilpSolutionLength = ilpNode.counting_solve(os, verbosity, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds);
 
       // Push the result to the rank
       if (ilpSolutionLength < heuristic_min_value && LP_RELAX) {

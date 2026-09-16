@@ -37,4 +37,4 @@ cd into the vhpop folder. You can then run vhpop. Here is an example command to 
 ./vhpop -h ILP -f LCFR -l 10000 -f MW -l unlimited ./examples/_grounded-bulldozer-domain.pddl ./examples/_grounded-bulldozer-simple.pddl
 ```
 For further details on how to run vhpop, refer to the vhpop readme.\
-The counting constraint relaxation is also available with the heuristic name ILPC. Both will be default print their solutions for each node, but this can be turned off in heuristics.cc by changing the verbosity in their function calls to 0.
+The counting constraint relaxation is also available with the heuristic name ILPC. By default neither heuristic prints anything while searching. To see the ILP solution found for each search node, pass VHPOP's verbosity option, for example `-v` or `-v1`. Level `-v2` additionally shows the ILP model being built and the CPLEX solver log, and `-v3` dumps the full constraint set; these higher levels also enable VHPOP's own diagnostic output.
