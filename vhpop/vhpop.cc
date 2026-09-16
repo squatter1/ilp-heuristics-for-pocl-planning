@@ -107,7 +107,7 @@ static void display_help() {
             << "  -s s,  --search-algorithm=s" << std::endl
             << "\t\t\tuse search algorithm s" << std::endl
             << "  -T t,  --time-limit=t\t"
-            << "limit search to t minutes" << std::endl
+            << "limit search to t seconds" << std::endl
             << "  -t t,  --tolerance=t\t"
             << "use tolerance t with durative actions;" << std::endl
             << "\t\t\t  time stamps less than t appart are considered"

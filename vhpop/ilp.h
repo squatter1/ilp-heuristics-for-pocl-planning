@@ -28,6 +28,7 @@
 #include "plans.h"
 
 #include <iostream>
+#include <limits>
 #include <map>
 #include <set>
 #include <string>
@@ -95,14 +96,8 @@ struct IlpAction {
  * ILP Problem definition. 
  */
 struct IlpProblem {
-  /* Constructs an empty ILP problem with the given name. */
-  IlpProblem(const std::string& name);
-
   /* Constructs an ILP problem from a problem. */
   IlpProblem(const Problem& problem);
-
-  /* Constructs an Ilp problem from a problem, with restricted predicates and actions. */
-  IlpProblem(const Problem& problem, std::map<std::string, Predicate> new_predicates, std::map<std::string, const ActionSchema *> new_actions);
 
   /* Deletes an ILP problem. */
   ~IlpProblem();
@@ -139,9 +134,6 @@ struct IlpProblem {
 
   /* Returns the goal of this problem. */
   const std::set<std::string>& goal() const { return goal_; }
-
-  /* Finds the shortest solution length of this delete-relaxed problem with an ILP */
-  const size_t solve(std::ostream& os, short int verbosity = 0) const;
 
 private:
   /* Name of this ILP problem. */
@@ -225,14 +217,13 @@ std::ostream& operator<<(std::ostream& os, const IlpPlan& p);
  * ILP Node definition. 
  */
 struct IlpNode {
+    /* Result of solve when the node has no delete relaxed solution. */
+    static constexpr size_t INFEASIBLE = std::numeric_limits<size_t>::max();
+    /* Result of solve when the solver failed. */
+    static constexpr size_t SOLVER_ERROR = std::numeric_limits<size_t>::max() - 1;
+
     /* Constructs an ILP node from a problem and a plan. */
     IlpNode(const Problem& problem, const Plan& plan);
-
-    /* Constructs an ILP node from a problem and a plan, with restricted predicates and actions. */
-    IlpNode(const Problem& problem, const Plan& plan, std::map<std::string, Predicate> new_predicates, std::map<std::string, const ActionSchema *> new_actions);
-
-    /* Constructs an ILP node from an ILP problem and an ILP plan. */
-    IlpNode(IlpProblem* problem, IlpPlan* plan);
   
     /* Deletes an ILP Node. */
     ~IlpNode();
@@ -247,10 +238,10 @@ struct IlpNode {
     IlpPlan* plan() const { return plan_; }
   
     /* Finds the shortest solution length of the problem from this node with an ILP by adding delete relaxed problem actions */
-    const size_t solve(std::ostream& os, short int verbosity = 0, bool lp_relax = false, size_t lb = 0, size_t ub = -1, size_t seconds = 3600) const;
+    size_t solve(std::ostream& os, short int verbosity = 0, bool lp_relax = false, size_t lb = 0, size_t ub = INFEASIBLE, size_t seconds = 3600) const;
 
     /* Finds the shortest solution length of the problem from this node with an ILP by adding delete relaxed problem actions and relaxing with counting constraints */
-    const size_t counting_solve(std::ostream& os, short int verbosity = 0, bool lp_relax = false, size_t lb = 0, size_t ub = -1, size_t seconds = 3600) const;
+    size_t counting_solve(std::ostream& os, short int verbosity = 0, bool lp_relax = false, size_t lb = 0, size_t ub = INFEASIBLE, size_t seconds = 3600) const;
 
   private:
     /* Node id (serial number). */
@@ -262,6 +253,9 @@ struct IlpNode {
 
     /* Removes causal links by integrating them into the action definitions */
     void remove_causal_links();
+
+    /* Builds and solves the ILP (counting = false) or ILPC (counting = true) model */
+    size_t solve_model(bool counting, std::ostream& os, short int verbosity, bool lp_relax, size_t lb, size_t ub, size_t seconds) const;
 
   friend std::ostream& operator<<(std::ostream& os, const IlpNode& n);
 };

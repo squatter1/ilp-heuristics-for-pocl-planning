@@ -164,9 +164,6 @@ struct PlanningGraph {
      parameter domain is empty. */
   const ActionDomain* action_domain(const std::string& name) const;
 
-  /* Returns the PredicateAtomsMap */
-  const std::multimap<Predicate, const Atom*>& predicate_atoms() const { return predicate_atoms_; }
-
 private:
   /* Atom value map. */
   struct AtomValueMap : public std::map<const Atom*, HeuristicValue> {

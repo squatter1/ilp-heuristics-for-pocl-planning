@@ -1040,9 +1040,7 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
   const IlpNode ilpNode = IlpNode(problem, plan);
 
   const bool LP_RELAX = false; // Currently LP_RELAX is not supported
-  size_t ilpSolutionLength = -1;
-  size_t error_length = -2;
-  size_t infeasible_length = -1;
+  size_t ilpSolutionLength = IlpNode::INFEASIBLE;
 
   for (std::vector<HVal>::const_iterator hi = h_.begin();
        hi != h_.end(); hi++) {
@@ -1059,29 +1057,25 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
         ilpSolutionLength = run_ilp();
         // The upper bound inherited from the parent plan is not guaranteed to hold for the child, so retry without it before pruning
         const size_t cap = std::min(problem.domain().predicates().predicates().size(), problem.domain().actions().size());
-        if (ilpSolutionLength == infeasible_length && heuristic_max_value < cap) {
+        if (ilpSolutionLength == IlpNode::INFEASIBLE && heuristic_max_value < cap) {
           heuristic_max_value = cap;
           ilpSolutionLength = run_ilp();
         }
       }
 
       // Push the result to the rank
-      if (ilpSolutionLength < heuristic_min_value && LP_RELAX) {
-        ilpSolutionLength = heuristic_min_value; // Can happen for LP_RELAX and some cases where lower bound is hit and obj isn't calculated
-      }
-      if (ilpSolutionLength > heuristic_max_value) {
-        // Prune this branch
-        rank.push_back(std::numeric_limits<float>::infinity());
-      } else if (ilpSolutionLength == error_length) {
+      if (ilpSolutionLength == IlpNode::SOLVER_ERROR) {
         // Use a fallback heuristic if there is an error
         rank.push_back(plan.num_steps()
                      + 0.5*(plan.num_open_conds() + plan.num_unsafes()));
+      } else if (ilpSolutionLength == IlpNode::INFEASIBLE || ilpSolutionLength > heuristic_max_value) {
+        // Prune this branch
+        rank.push_back(std::numeric_limits<float>::infinity());
       } else {
-        if (ilpSolutionLength == infeasible_length) {
-          rank.push_back(std::numeric_limits<float>::infinity());
-        } else {
-          rank.push_back(plan.num_steps() + ilpSolutionLength);
+        if (ilpSolutionLength < heuristic_min_value && LP_RELAX) {
+          ilpSolutionLength = heuristic_min_value; // Can happen for LP_RELAX and some cases where lower bound is hit and obj isn't calculated
         }
+        rank.push_back(plan.num_steps() + ilpSolutionLength);
       }
       break;
     case LIFO:
