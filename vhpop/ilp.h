@@ -180,12 +180,12 @@ struct IlpPlan {
   }
 
   /* ILP plan causal links. */
-  const std::map<size_t, std::pair<size_t, std::string>>& links() const {
+  const std::multimap<size_t, std::pair<size_t, std::string>>& links() const {
     return links_;
   }
 
   /* ILP plan orderings. */
-  const std::map<size_t, size_t>& orderings() const {
+  const std::set<std::pair<size_t, size_t>>& orderings() const {
     return orderings_;
   }
 
@@ -211,9 +211,9 @@ private:
   /* Plan steps. */
   std::map<size_t, IlpAction*> steps_;
   /* Plan causal links */
-  std::map<size_t, std::pair<size_t, std::string>> links_;
+  std::multimap<size_t, std::pair<size_t, std::string>> links_;
   /* Plan orderings. */
-  std::map<size_t, size_t> orderings_;
+  std::set<std::pair<size_t, size_t>> orderings_;
 
   friend std::ostream& operator<<(std::ostream& os, const IlpPlan& p);
 };

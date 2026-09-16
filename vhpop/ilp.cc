@@ -576,7 +576,7 @@ IlpAction* IlpPlan::get_action(const size_t id) const {
 }
 
 void IlpPlan::add_causal_link(const size_t from, const size_t to, const std::string& condition) {
-  links_[from] = std::make_pair(to, condition);
+  links_.insert(std::make_pair(from, std::make_pair(to, condition)));
 }
 
 void IlpPlan::clear_causal_links() {
@@ -584,7 +584,7 @@ void IlpPlan::clear_causal_links() {
 }
 
 void IlpPlan::add_ordering(const size_t before, const size_t after) {
-  orderings_[before] = after;
+  orderings_.insert(std::make_pair(before, after));
 }
 
 std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
@@ -599,7 +599,7 @@ std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
   }
   // Print the causal links
   os << "Causal Links:" << std::endl;
-  for (std::map<size_t, std::pair<size_t, std::string>>::const_iterator ai =
+  for (std::multimap<size_t, std::pair<size_t, std::string>>::const_iterator ai =
              p.links_.begin();
        ai != p.links_.end(); ai++) {
     os << "  " << (*ai).second.second << ": ";
@@ -622,7 +622,7 @@ std::ostream& operator<<(std::ostream& os, const IlpPlan& p) {
   }
   // Print the orderings
   os << "Orderings:" << std::endl;
-  for (std::map<size_t, size_t>::const_iterator ai =
+  for (std::set<std::pair<size_t, size_t>>::const_iterator ai =
              p.orderings_.begin();
        ai != p.orderings_.end(); ai++) {
     if ((*ai).first == 0) {
@@ -1000,7 +1000,7 @@ const size_t IlpNode::solve(std::ostream& os, short int verbosity, bool lp_relax
 
 
     // Constraint set 7: Step ordering constraints
-    for (std::map<size_t, size_t>::const_iterator oi = plan_->orderings().begin();
+    for (std::set<std::pair<size_t, size_t>>::const_iterator oi = plan_->orderings().begin();
          oi != plan_->orderings().end(); oi++) {
       IloConstraint c7 = stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).first)->name()).c_str()]] 
                        - stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).second)->name()).c_str()]] + 1 <= 0;
@@ -1621,7 +1621,7 @@ const size_t IlpNode::counting_solve(std::ostream& os, short int verbosity, bool
     }
 
     // Constraint set 7: Step ordering constraints
-    for (std::map<size_t, size_t>::const_iterator oi = plan_->orderings().begin();
+    for (std::set<std::pair<size_t, size_t>>::const_iterator oi = plan_->orderings().begin();
          oi != plan_->orderings().end(); oi++) {
       IloConstraint c7 = stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).first)->name()).c_str()]] 
                        - stepTimeVars[stepTime[("ST-" + plan_->steps().at((*oi).second)->name()).c_str()]] < 0;
@@ -1874,7 +1874,7 @@ const size_t IlpNode::counting_solve(std::ostream& os, short int verbosity, bool
 
 void IlpNode::remove_causal_links() {
   // Iterate through the causal links
-  for (std::map<size_t, std::pair<size_t, std::string>>::const_iterator li =
+  for (std::multimap<size_t, std::pair<size_t, std::string>>::const_iterator li =
            plan_->links().begin();
        li != plan_->links().end(); li++) {
     // Get the from and to actions
