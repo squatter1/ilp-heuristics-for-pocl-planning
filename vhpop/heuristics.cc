@@ -1053,10 +1053,17 @@ void Heuristic::plan_rank(std::vector<float>& rank, const Plan& plan,
     case ILP:
     case ILPC:
       // Solve the ILP
-      if (h == ILP)
-        ilpSolutionLength = ilpNode.solve(os, verbosity, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds);
-      else
-        ilpSolutionLength = ilpNode.counting_solve(os, verbosity, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds);
+      {
+        auto run_ilp = [&]() { return (h == ILP) ? ilpNode.solve(os, verbosity, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds)
+                                                 : ilpNode.counting_solve(os, verbosity, LP_RELAX, heuristic_min_value, heuristic_max_value, seconds); };
+        ilpSolutionLength = run_ilp();
+        // The upper bound inherited from the parent plan is not guaranteed to hold for the child, so retry without it before pruning
+        const size_t cap = std::min(problem.domain().predicates().predicates().size(), problem.domain().actions().size());
+        if (ilpSolutionLength == infeasible_length && heuristic_max_value < cap) {
+          heuristic_max_value = cap;
+          ilpSolutionLength = run_ilp();
+        }
+      }
 
       // Push the result to the rank
       if (ilpSolutionLength < heuristic_min_value && LP_RELAX) {
