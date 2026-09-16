@@ -6,13 +6,18 @@ This repository used NO LLM assistance for its original development, and MINIMAL
 ## Repository Context
 This repository is forked from vhpop https://github.com/hlsyounes/vhpop and moved over from an original repository on ANU gitlab. As part of my COMP3770 independent research course, I developed and tested a novel forms of partial order causal link planning heuristic within vhpop, which is what this repository holds. Unlike many of my other ANU work, as this was entirely independant work, it is not bound by ANUs copyright licences which usually prevent the public release of work.
 
-### My additions
-Most of my code can be found in the ilp.h and ilp.cc files, which were fully coded by me. I also added code to heuristics.h and heuristics.cc (all sections relating to the ILP and ILPC heuristics), as well as plans.h and plans.cc (only minor details changed).
-
 ## The Report
-The full final project report, and single A0 size poster, are in the root directory, and should be referred to as a reference for the context behind this repository.  
+The full final project report, and single A0 size poster, are in the root directory, and should be referred to as a reference for the context behind this repository. Full results can be found in Chapter 5 of the report.  
 
-The report folder has each iteration of the report, starting with the notes files which were used to jot down ideas and potentially useful references. It also contains other materials generated for the course.
+The report folder has each iteration of the report, starting with the notes files which were used to jot down ideas and potentially useful references. It also contains other materials generated for the course.  
+
+### My contributions
+Everything outside `vhpop/` (the report, poster and notes) is mine. Inside `vhpop/`, which is otherwise upstream VHPOP 3.0 by Håkan Younes, my code is:
+`vhpop/ilp.h`, `vhpop/ilp.cc`: Written entirely by me.
+`vhpop/heuristics.h`, `vhpop/heuristics.cc`: Registration of the `ILP` and `ILPC` heuristic names, and the `plan_rank` case that calls the solver, propagates bounds from the parent node and falls back on solver error.
+`vhpop/plans.h`, `vhpop/plans.cc`: Per-plan heuristic bound fields and time-limit checks inside the search loop.
+`vhpop/_eval.sh`: Helper for running evaluation instances.
+`vhpop/examples/_grounded-*.pddl`: Small hand-grounded test problems used during development.
 
 ## Building with CPLEX
 The ILP and ILPC heuristics call IBM ILOG CPLEX through its C++ Concert API, so CPLEX must be installed before VHPOP will link. The project was developed against CPLEX Studio 22.1.1 on x86-64 Linux; adjust the paths below if your installation differs.
